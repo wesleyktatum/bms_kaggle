@@ -38,14 +38,14 @@ def calc_data_mean_std(img_ids, DIR):
     with open(os.path.join(DIR, 'mean_std.json'), 'w') as f:
         json.dump(mean_std_dict, f)
 
-def tokenize_inchis(inchi):
+def tokenize_inchi(inchi):
     pattern =  "(\[[^\]]+]|Br?|Cl?|Si?|N|H|O|S|P|F|I|D|T|b|c|n|o|s|p|h|t|m|i|\(|\)|\.|=|#|-|,|\+|\\\\|\/|_|:|~|@|\?|>|\*|\$|1[0-9]|2[0-9]|[0-9])"
     regezz = re.compile(pattern)
     tokens = [token for token in regezz.findall(inchi)]
     assert inchi == ''.join(tokens), ("{} could not be joined -> {}".format(inchi, tokens))
     return tokens
 
-def encode_inchis(inchi, max_len, char_dict):
+def encode_inchi(inchi, max_len, char_dict):
     "Converts tokenized InChIs to a list of token ids"
     for i in range(max_len - len(inchi)):
         inchi.append('<pad>')
