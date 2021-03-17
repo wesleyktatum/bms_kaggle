@@ -24,7 +24,6 @@ class MoleculeDataset(Dataset):
         img_id = self.labels.image_id.values[i]
         img_path = get_path_from_img_id(img_id, self.source_dir)
         img = (255 - cv2.imread(img_path)) / 255
-        img = img[:,:,0]
         if self.transform is not None:
             img = self.transform(img)
         img = torch.tensor(img)
