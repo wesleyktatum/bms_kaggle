@@ -41,6 +41,7 @@ class MoleculeDataset(Dataset):
         if self.do_transform:
             img = self.transform(img)
         img = torch.tensor(img)
+        img = img.view(img.shape[2], img.shape[0], img.shape[1])
 
 
         ### grab inchi
