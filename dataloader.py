@@ -1,10 +1,12 @@
 import os
-import cv2
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+from PIL import Image
 
 import torch
 from torch.utils.data import Dataset
+from torchvision import transforms
 
 from util import *
 
@@ -12,21 +14,36 @@ class MoleculeDataset(Dataset):
     """
     PyTorch Dataset class to load molecular images and InChIs
     """
-    def __init__(self, labels_fn, source_dir, char_dict, max_inchi_len, transform=None):
+    def __init__(self, labels_fn, source_dir, char_dict, max_inchi_len, do_transform = False, rotate = True):
         self.labels = pd.read_csv(labels_fn)
         self.source_dir = source_dir
         self.char_dict = char_dict
         self.max_inchi_len = max_inchi_len
-        self.transform = transform
+        self.do_transform = do_transform
+        self.rotate = rotate
 
     def __getitem__(self, i):
         ### grab image
         img_id = self.labels.image_id.values[i]
         img_path = get_path_from_img_id(img_id, self.source_dir)
-        img = (255 - cv2.imread(img_path)) / 255
-        if self.transform is not None:
+        img = Image.open(img_path)
+        img.convert('L')
+        
+        if self.rotate:
+            rotation = transforms.Compose([
+                transforms.RandomHorizontalFlip(),
+#                 tranforms.
+            ])
+            img = rotation(img)
+        
+        img = np.array(img)
+        img = invert_and_normalize(img)
+        
+        if self.do_transform:
+            img = img.to_numpy()
             img = self.transform(img)
-        img = torch.tensor(img)
+        img = torch.tensor(img)    
+        
 
         ### grab inchi
         inchi = self.labels.InChI.values[i]
@@ -41,3 +58,25 @@ class MoleculeDataset(Dataset):
 
     def __len__(self):
         return self.labels.shape[0]
+    
+    def transform(self, img):
+        """
+        Takes in a 2D grayscale image and turns into multi-channel array. Each channel
+        stores a different type of transformation.
+
+        Currently, channels are: [img, vertices, dilated, eroded,
+                                  enhanced and detected edges]
+        """
+        prebinarized = binarize(img)
+
+        edges = edge_enhance(prebinarized)
+        edges = edge_detect(edges)
+
+    #     vertices = get_vertices(img, window_size = 5, window_mask = True)
+        vertices = get_vertices(img, window_size = 3, window_mask = False)
+
+        dilated = dilate(img)
+        eroded = erode(dilated)
+
+        transformed = np.dstack((img, vertices, dilated, eroded, edges))
+        return transformed
