@@ -28,7 +28,7 @@ class MoleculeDataset(Dataset):
         img_id = self.labels.image_id.values[i]
         img_path = get_path_from_img_id(img_id, self.source_dir)
         img = Image.open(img_path)
-        img.convert('L')
+        img = img.convert('L')
 
         if self.rotate:
             angles = [0, 90, 180, 270]
