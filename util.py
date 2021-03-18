@@ -4,6 +4,8 @@ import json
 import numpy as np
 import matplotlib.pyplot as plt
 
+from skimage import feature, filters, morphology
+
 def get_path_from_img_id(img_id, DIR):
     img_path = os.path.join(DIR, img_id[0], img_id[1], img_id[2], '{}.png'.format(img_id))
     return img_path
@@ -17,7 +19,10 @@ def calc_data_mean_std(img_ids, DIR):
     channel_3_stds = []
     for img_id in img_ids:
         img_path = get_path_from_img_id(img_id, DIR)
-        img = (255 - plt.imread(img_path)) / 255
+        img = Image.open(img_path)
+        img.convert('L')
+        img = np.array(img)
+        img = invert_and_normalize(img)
         means = np.mean(img.reshape(-1, img.shape[-1]), axis=0)
         stds = np.std(img.reshape(-1, img.shape[-1]), axis=0)
         channel_1_means.append(means[0])
@@ -58,7 +63,7 @@ def encode_inchi(inchi, max_len, char_dict):
 ######## IMAGE TRANSFORM FUNCTIONS #####################
 ########################################################
 
-def invert_and_normalize_img(img):
+def invert_and_normalize(img):
     new_im = (255 - img) / 255
     return new_im
 
@@ -98,38 +103,36 @@ def get_window(x, y, vertex_map, window_size = 5):
         if i <= window_size-1:
             row = y - (window_size - i)
             vertex_map[(x-window_size):(x+window_size), row] = 1
-            
+
         if i == (window_size + 1):
             row = y
             vertex_map[(x-window_size):(x+window_size), row] = 1
-            
+
         if i >= (window_size + 1):
             row = y + (i - window_size)
             vertex_map[(x-window_size):(x+window_size), row] = 1
-    
+
     return vertex_map
 
 
 def get_vertices(img, window_size, window_mask = True):
-    
+
     coords = feature.corner_peaks(feature.corner_harris(img), min_distance=5, threshold_rel=0.02)
 #     coords_subpix = feature.corner_subpix(img, coords, window_size=13)
-    
+
     h, w = img.shape
     vertex_map =np.zeros((h, w))
     for i, coordinate in enumerate(coords):
         x, y = coordinate
         if window_size != 0:
             vertex_map = get_window(x, y, vertex_map, window_size = window_size)
-            
+
         else:
             vertex_map[x, y] = 1
-                        
+
     if window_mask:
         vertex_windows = np.where(vertex_map == 1, img, 0)
         return vertex_windows
-        
-    else:    
+
+    else:
         return vertex_map
-
-
