@@ -2,6 +2,7 @@ import os
 import re
 import json
 import numpy as np
+import matplotlib.pyplot as plt
 
 def get_path_from_img_id(img_id, DIR):
     img_path = os.path.join(DIR, img_id[0], img_id[1], img_id[2], '{}.png'.format(img_id))
@@ -16,7 +17,7 @@ def calc_data_mean_std(img_ids, DIR):
     channel_3_stds = []
     for img_id in img_ids:
         img_path = get_path_from_img_id(img_id, DIR)
-        img = (255 - cv2.imread(img_path)) / 255
+        img = (255 - plt.imread(img_path)) / 255
         means = np.mean(img.reshape(-1, img.shape[-1]), axis=0)
         stds = np.std(img.reshape(-1, img.shape[-1]), axis=0)
         channel_1_means.append(means[0])
@@ -51,3 +52,84 @@ def encode_inchi(inchi, max_len, char_dict):
         inchi.append('<pad>')
     inchi_vec = [char_dict[c] for c in inchi]
     return inchi_vec
+
+
+########################################################
+######## IMAGE TRANSFORM FUNCTIONS #####################
+########################################################
+
+def invert_and_normalize_img(img):
+    new_im = (255 - img) / 255
+    return new_im
+
+
+def binarize(img):
+#     thresh = filters.threshold_yen(img)
+    thresh = 0.3
+    threshed = img > thresh
+    binary = np.where(threshed == True, 1, 0)
+    return binary
+
+
+def dilate(img):
+    dilated = morphology.dilation(img, selem = morphology.octagon(1, 1))
+    return dilated
+
+
+def erode(img):
+    eroded = morphology.erosion(img, selem = morphology.octagon(1, 1))
+    return eroded
+
+
+def edge_enhance(img):
+    sharpened = filters.unsharp_mask(img, radius = 4, amount = 3)
+    return sharpened
+
+
+def edge_detect(img):
+#     edges = feature.canny(img)
+    edges = filters.sobel(img)
+    return edges
+
+
+def get_window(x, y, vertex_map, window_size = 5):
+    n_rows = (window_size * 2) + 1
+    for i in range(n_rows):
+        if i <= window_size-1:
+            row = y - (window_size - i)
+            vertex_map[(x-window_size):(x+window_size), row] = 1
+            
+        if i == (window_size + 1):
+            row = y
+            vertex_map[(x-window_size):(x+window_size), row] = 1
+            
+        if i >= (window_size + 1):
+            row = y + (i - window_size)
+            vertex_map[(x-window_size):(x+window_size), row] = 1
+    
+    return vertex_map
+
+
+def get_vertices(img, window_size, window_mask = True):
+    
+    coords = feature.corner_peaks(feature.corner_harris(img), min_distance=5, threshold_rel=0.02)
+#     coords_subpix = feature.corner_subpix(img, coords, window_size=13)
+    
+    h, w = img.shape
+    vertex_map =np.zeros((h, w))
+    for i, coordinate in enumerate(coords):
+        x, y = coordinate
+        if window_size != 0:
+            vertex_map = get_window(x, y, vertex_map, window_size = window_size)
+            
+        else:
+            vertex_map[x, y] = 1
+                        
+    if window_mask:
+        vertex_windows = np.where(vertex_map == 1, img, 0)
+        return vertex_windows
+        
+    else:    
+        return vertex_map
+
+
