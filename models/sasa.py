@@ -270,9 +270,9 @@ class ModelParallel(nn.Module):
             ).to('cuda:0')
 
         self.layer1 = self._make_layer(block, 64, num_blocks[0], stride=1).to('cuda:1')
-        self.layer2 = self._make_layer(block, 128, num_blocks[1], stride=2).to('cuda:0')
-        self.layer3 = self._make_layer(block, 256, num_blocks[2], stride=2).to('cuda:0')
-        self.layer4 = self._make_layer(block, 512, num_blocks[3], stride=2).to('cuda:0')
+        self.layer2 = self._make_layer(block, 128, num_blocks[1], stride=2).to('cuda:2')
+        self.layer3 = self._make_layer(block, 256, num_blocks[2], stride=2).to('cuda:3')
+        self.layer4 = self._make_layer(block, 512, num_blocks[3], stride=2).to('cuda:3')
 
     def _make_layer(self, block, planes, num_blocks, stride):
         strides = [stride] + [1] * (num_blocks - 1)
@@ -288,10 +288,10 @@ class ModelParallel(nn.Module):
         out = self.init(x).to('cuda:1')
         print('-- Stem Shape --')
         print(out.shape)
-        out = self.layer1(out).to('cuda:0')
+        out = self.layer1(out).to('cuda:2')
         print('-- Layer1 Shape --')
         print(out.shape)
-        out = self.layer2(out)
+        out = self.layer2(out).to('cuda:3')
         print('-- Layer2 Shape --')
         print(out.shape)
         out = self.layer3(out)
