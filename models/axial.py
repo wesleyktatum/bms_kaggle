@@ -213,19 +213,37 @@ class AxialAttentionNet(nn.Module):
 
     def _forward_impl(self, x):
         # See note [TorchScript super()]
+        print('-- Input Shape --')
+        print(x.shape)
         x = self.conv1(x)
         x = self.bn1(x)
         x = self.relu(x)
         x = self.maxpool(x)
+        print('-- Stem --')
+        print(x.shape)
 
         x = self.layer1(x)
+        print('-- Layer 1 --')
+        print(x.shape)
         x = self.layer2(x)
+        print('-- Layer 2 --')
+        print(x.shape)
         x = self.layer3(x)
+        print('-- Layer 3 --')
+        print(x.shape)
         x = self.layer4(x)
+        print('-- Layer 4 --')
+        print(x.shape)
 
         x = self.avgpool(x)
+        print('-- AvgPool --')
+        print(x.shape)
         x = torch.flatten(x, 1)
+        print('-- Flatten --')
+        print(x.shape)
         x = self.fc(x)
+        print('-- Dense --')
+        print(x.shape)
 
         return x
 
