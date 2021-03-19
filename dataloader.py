@@ -66,16 +66,18 @@ class MoleculeDataset(Dataset):
         Currently, channels are: [img, vertices, dilated, eroded,
                                   enhanced and detected edges]
         """
-        prebinarized = binarize(img)
 
-        edges = edge_enhance(prebinarized)
-        edges = edge_detect(edges)
+        prebinarized = util.binarize(img)
 
-    #     vertices = get_vertices(img, window_size = 5, window_mask = True)
-        vertices = get_vertices(img, window_size = 3, window_mask = False)
+        edges = util.edge_enhance(prebinarized)
+        edges = util.edge_detect(edges)
 
-        dilated = dilate(img)
-        eroded = erode(dilated)
+        vertices, window_list = util.get_vertices(img, window_size = 7,
+                                                  window_mask = True,
+                                                  window_list = True)
+    #     vertices = util.get_vertices(img, window_size = 3, window_mask = False)
 
-        transformed = np.dstack((img, vertices, dilated, eroded, edges))
+        closed = util.closing(prebinarized)
+
+        transformed = np.dstack((img, vertices, closed, edges))
         return transformed

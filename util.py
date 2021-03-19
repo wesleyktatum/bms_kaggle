@@ -20,7 +20,7 @@ def calc_data_mean_std(img_ids, DIR):
     for img_id in img_ids:
         img_path = get_path_from_img_id(img_id, DIR)
         img = Image.open(img_path)
-        img.convert('L')
+        img = img.convert('L')
         img = np.array(img)
         img = invert_and_normalize(img)
         means = np.mean(img.reshape(-1, img.shape[-1]), axis=0)
@@ -86,6 +86,16 @@ def erode(img):
     return eroded
 
 
+def opening(img):
+    opened = morphology.opening(img, selem = morphology.star(1))
+    return opened
+
+
+def closing(img):
+    closed = morphology.closing(img, selem = morphology.octagon(1, 1))
+    return closed
+
+
 def edge_enhance(img):
     sharpened = filters.unsharp_mask(img, radius = 4, amount = 3)
     return sharpened
@@ -97,7 +107,7 @@ def edge_detect(img):
     return edges
 
 
-def get_window(x, y, vertex_map, window_size = 5):
+def get_window_mask(x, y, vertex_map, window_size = 5):
     n_rows = (window_size * 2) + 1
     for i in range(n_rows):
         if i <= window_size-1:
@@ -115,24 +125,59 @@ def get_window(x, y, vertex_map, window_size = 5):
     return vertex_map
 
 
-def get_vertices(img, window_size, window_mask = True):
+def get_img_window(x, y, img, window_size = 5):
+    window = img[(x-window_size):(x+window_size), (y-window_size):y+window_size]
+    return window
 
-    coords = feature.corner_peaks(feature.corner_harris(img), min_distance=5, threshold_rel=0.02)
-#     coords_subpix = feature.corner_subpix(img, coords, window_size=13)
 
+def get_window_coords(img):
+    coords = feature.corner_peaks(feature.corner_harris(img), min_distance=5,
+                                  threshold_rel=0.02)
+    return coords
+
+
+def get_vertex_map(coords, img, window_size, window_list):
     h, w = img.shape
-    vertex_map =np.zeros((h, w))
+    vertex_map = np.zeros((h, w))
+    windows = {'coordinates':[],
+               'windows': []}
+    
     for i, coordinate in enumerate(coords):
         x, y = coordinate
-        if window_size != 0:
-            vertex_map = get_window(x, y, vertex_map, window_size = window_size)
-
+        
+        if window_size > 0:
+                vertex_map = get_window_mask(x, y, vertex_map,
+                                             window_size = window_size)
         else:
             vertex_map[x, y] = 1
+        
+        if window_list:
+            window = get_img_window(x, y, img, window_size = window_size)
+            windows['windows'].append(window)
+            windows['coordinates'].append((x, y))
+            
+    if window_list:
+        return vertex_map, windows
+    else:
+        return vertex_map, None
 
-    if window_mask:
-        vertex_windows = np.where(vertex_map == 1, img, 0)
-        return vertex_windows
 
+def get_vertices(img, window_size = 7, window_mask = True, window_list = True):
+
+    coords = get_window_coords(img)
+    
+    vertex_map, windows = get_vertex_map(coords, img, window_size = window_size,
+                                         window_list = window_list)
+
+    if window_mask == True:
+        if window_list:
+            vertex_windows = np.where(vertex_map == 1, img, 0)
+            return vertex_windows, windows
+        
+        else:
+            vertex_windows = np.where(vertex_map == 1, img, 0)
+            return vertex_windows
     else:
         return vertex_map
+    
+    
