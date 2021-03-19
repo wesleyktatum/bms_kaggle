@@ -67,17 +67,17 @@ class MoleculeDataset(Dataset):
                                   enhanced and detected edges]
         """
 
-        prebinarized = util.binarize(img)
+        prebinarized = binarize(img)
 
-        edges = util.edge_enhance(prebinarized)
-        edges = util.edge_detect(edges)
+        edges = edge_enhance(prebinarized)
+        edges = edge_detect(edges)
 
-        vertices, window_list = util.get_vertices(img, window_size = 7,
-                                                  window_mask = True,
-                                                  window_list = True)
+        vertices, window_list = get_vertices(img, window_size = 7,
+                                             window_mask = True,
+                                             window_list = True)
     #     vertices = util.get_vertices(img, window_size = 3, window_mask = False)
 
-        closed = util.closing(prebinarized)
+        closed = closing(prebinarized)
 
         transformed = np.dstack((img, vertices, closed, edges))
         return transformed

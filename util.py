@@ -181,3 +181,18 @@ def get_vertices(img, window_size = 7, window_mask = True, window_list = True):
         return vertex_map
     
     
+def morph_around_windows(img, windows, morph_function):
+    """
+    Ensure that window_list only contains windows that are to be avoided during
+    morphological operations (e.g. closing). window mask is created and morph_function
+    is applied to resulting image
+    """
+    
+    vertex_mask, _ = get_vertex_map(windows['coordinates'], img, window_size = 5,
+                                    window_list = False)
+    
+    morphed_img = morph_function(img)
+    
+    final_img = np.where(vertex_mask == 1, img, morphed_img)
+    
+    return final_img
