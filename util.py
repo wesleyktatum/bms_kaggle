@@ -140,22 +140,22 @@ def get_vertex_map(coords, img, window_size, window_list):
     h, w = img.shape
     vertex_map = np.zeros((h, w))
     windows = {'coordinates':[],
-               'windows': []}
-    
+               'imgs': []}
+
     for i, coordinate in enumerate(coords):
         x, y = coordinate
-        
+
         if window_size > 0:
                 vertex_map = get_window_mask(x, y, vertex_map,
                                              window_size = window_size)
         else:
             vertex_map[x, y] = 1
-        
+
         if window_list:
             window = get_img_window(x, y, img, window_size = window_size)
-            windows['windows'].append(window)
+            windows['imgs'].append(window)
             windows['coordinates'].append((x, y))
-            
+
     if window_list:
         return vertex_map, windows
     else:
@@ -165,19 +165,17 @@ def get_vertex_map(coords, img, window_size, window_list):
 def get_vertices(img, window_size = 7, window_mask = True, window_list = True):
 
     coords = get_window_coords(img)
-    
+
     vertex_map, windows = get_vertex_map(coords, img, window_size = window_size,
                                          window_list = window_list)
 
-    if window_mask == True:
+    if window_mask:
         if window_list:
             vertex_windows = np.where(vertex_map == 1, img, 0)
             return vertex_windows, windows
-        
+
         else:
             vertex_windows = np.where(vertex_map == 1, img, 0)
             return vertex_windows
     else:
         return vertex_map
-    
-    
