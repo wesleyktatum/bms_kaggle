@@ -130,10 +130,11 @@ class AttentionStem(nn.Module):
 ### Model Layers
 
 class Bottleneck(nn.Module):
+    expansion = 4
+
     def __init__(self, in_channels, out_channels, stride=1, groups=1, base_width=64):
         super().__init__()
         self.stride = stride
-        self.expansion = 4
         width = int(out_channels * (base_width / 64.)) * groups
 
         self.conv1 = nn.Sequential(
