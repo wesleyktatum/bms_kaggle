@@ -304,14 +304,23 @@ class ModelParallel(nn.Module):
 
         return out
 
-def ResNet26(num_classes=1000, stem=False):
-    return Model(Bottleneck, [1, 2, 4, 1], num_classes=num_classes, stem=stem)
+def ResNet26(num_classes=1000, stem=False, parallel=False, devices=[]):
+    if parallel:
+        return ModelParallel(Bottleneck, [1, 2, 4, 1], devices, num_classes=num_classes, stem=stem)
+    else:
+        return Model(Bottleneck, [1, 2, 4, 1], num_classes=num_classes, stem=stem)
 
-def ResNet38(num_classes=1000, stem=False):
-    return Model(Bottleneck, [2, 3, 5, 2], num_classes=num_classes, stem=stem)
+def ResNet38(num_classes=1000, stem=False, parallel=False, devices=[]):
+    if parallel:
+        return ModelParallel(Bottleneck, [2, 3, 5, 2], devices, num_classes=num_classes, stem=stem)
+    else:
+        return Model(Bottleneck, [2, 3, 5, 2], num_classes=num_classes, stem=stem)
 
-def ResNet50(num_classes=1000, stem=False):
-    return Model(Bottleneck, [3, 4, 6, 3], num_classes=num_classes, stem=stem)
+def ResNet50(num_classes=1000, stem=False, parallel=False, devices=[]):
+    if parallel:
+        return ModelParallel(Bottleneck, [3, 4, 6, 3], devices, num_classes=num_classes, stem=stem)
+    else:
+        return Model(Bottleneck, [3, 4, 6, 3], num_classes=num_classes, stem=stem)
 
 
 def get_model_parameters(model):
