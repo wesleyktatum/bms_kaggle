@@ -238,7 +238,7 @@ class Model(nn.Module):
         return out
 
 class ModelParallel(nn.Module):
-    def __init__(self, block, num_blocks, devices, num_classes=1000, stem=False):
+    def __init__(self, block, num_blocks, num_classes=1000, stem=False):
         super().__init__()
         self.in_places = 64
         self.devices = devices
@@ -255,7 +255,7 @@ class ModelParallel(nn.Module):
                 # nn.BatchNorm2d(64),
                 # nn.ReLU(),
                 # nn.MaxPool2d(4, 4)
-            ).to(devices[0])
+            ).to('cuda:0')
         else:
             self.init = nn.Sequential(
                 # CIFAR10
@@ -268,12 +268,12 @@ class ModelParallel(nn.Module):
                 # nn.BatchNorm2d(64),
                 # nn.ReLU(),
                 # nn.MaxPool2d(kernel_size=3, stride=2, padding=1),
-            ).to(devices[0])
+            ).to('cuda:0')
 
-        self.layer1 = self._make_layer(block, 64, num_blocks[0], stride=1).to(devices[0])
-        self.layer2 = self._make_layer(block, 128, num_blocks[1], stride=2).to(devices[0])
-        self.layer3 = self._make_layer(block, 256, num_blocks[2], stride=2).to(devices[1])
-        self.layer4 = self._make_layer(block, 512, num_blocks[3], stride=2).to(devices[1])
+        self.layer1 = self._make_layer(block, 64, num_blocks[0], stride=1).to('cuda:0')
+        self.layer2 = self._make_layer(block, 128, num_blocks[1], stride=2).to('cuda:0')
+        self.layer3 = self._make_layer(block, 256, num_blocks[2], stride=2).to('cuda:1')
+        self.layer4 = self._make_layer(block, 512, num_blocks[3], stride=2).to('cuda:1')
 
     def _make_layer(self, block, planes, num_blocks, stride):
         strides = [stride] + [1] * (num_blocks - 1)
@@ -292,7 +292,7 @@ class ModelParallel(nn.Module):
         out = self.layer1(out)
         print('-- Layer1 Shape --')
         print(out.shape)
-        out = self.layer2(out).to(devices[1])
+        out = self.layer2(out).to('cuda:1')
         print('-- Layer2 Shape --')
         print(out.shape)
         out = self.layer3(out)
