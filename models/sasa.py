@@ -207,7 +207,6 @@ class Model(nn.Module):
         self.layer2 = self._make_layer(block, 128, num_blocks[1], stride=2)
         self.layer3 = self._make_layer(block, 256, num_blocks[2], stride=2)
         self.layer4 = self._make_layer(block, 512, num_blocks[3], stride=2)
-        self.dense = nn.Linear(512 * block.expansion, num_classes)
 
     def _make_layer(self, block, planes, num_blocks, stride):
         strides = [stride] + [1] * (num_blocks - 1)
@@ -235,14 +234,72 @@ class Model(nn.Module):
         out = self.layer4(out)
         print('-- Layer4 Shape --')
         print(out.shape)
-        out = F.avg_pool2d(out, 4)
-        print('-- Avg Pool2D Shape --')
+
+        return out
+
+class ModelParallel(nn.Module):
+    def __init__(self, block, num_blocks, devices, num_classes=1000, stem=False):
+        super().__init__()
+        self.in_places = 64
+        self.devices = devices
+
+        if stem:
+            self.init = nn.Sequential(
+                # CIFAR10
+                AttentionStem(in_channels=3, out_channels=64, kernel_size=4, stride=1, padding=2, groups=1),
+                nn.BatchNorm2d(64),
+                nn.ReLU(),
+
+                # For ImageNet
+                # AttentionStem(in_channels=3, out_channels=64, kernel_size=4, stride=1, padding=2, groups=1),
+                # nn.BatchNorm2d(64),
+                # nn.ReLU(),
+                # nn.MaxPool2d(4, 4)
+            ).to(devices[0])
+        else:
+            self.init = nn.Sequential(
+                # CIFAR10
+                nn.Conv2d(3, 64, kernel_size=3, stride=1, padding=1, bias=False),
+                nn.BatchNorm2d(64),
+                nn.ReLU(),
+
+                # For ImageNet
+                # nn.Conv2d(3, 64, kernel_size=7, stride=2, padding=3, bias=False),
+                # nn.BatchNorm2d(64),
+                # nn.ReLU(),
+                # nn.MaxPool2d(kernel_size=3, stride=2, padding=1),
+            ).to(devices[0])
+
+        self.layer1 = self._make_layer(block, 64, num_blocks[0], stride=1).to(devices[0])
+        self.layer2 = self._make_layer(block, 128, num_blocks[1], stride=2).to(devices[0])
+        self.layer3 = self._make_layer(block, 256, num_blocks[2], stride=2).to(devices[1])
+        self.layer4 = self._make_layer(block, 512, num_blocks[3], stride=2).to(devices[1])
+
+    def _make_layer(self, block, planes, num_blocks, stride):
+        strides = [stride] + [1] * (num_blocks - 1)
+        layers = []
+        for stride in strides:
+            layers.append(block(self.in_places, planes, stride))
+            self.in_places = planes * block.expansion
+        return nn.Sequential(*layers)
+
+    def forward(self, x):
+        print('-- Input Shape --')
+        print(x.shape)
+        out = self.init(x)
+        print('-- Stem Shape --')
         print(out.shape)
-        out = out.view(out.size(0), -1)
-        print('-- Reshape --')
+        out = self.layer1(out)
+        print('-- Layer1 Shape --')
         print(out.shape)
-        out = self.dense(out)
-        print('-- Dense Shape --')
+        out = self.layer2(out).to(devices[1])
+        print('-- Layer2 Shape --')
+        print(out.shape)
+        out = self.layer3(out)
+        print('-- Layer3 Shape --')
+        print(out.shape)
+        out = self.layer4(out)
+        print('-- Layer4 Shape --')
         print(out.shape)
 
         return out
