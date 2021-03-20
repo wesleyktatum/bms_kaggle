@@ -10,7 +10,7 @@ def conv1x1(in_planes, out_planes, stride=1):
     return nn.Conv2d(in_planes, out_planes, kernel_size=1, stride=stride, bias=False)
 
 class AxialAttention(nn.Module):
-    def __init__(self, in_planes, out_planes, groups=8, kernel_size=56,
+    def __init__(self, in_planes, out_planes, groups=8, kernel_size=64,
                  stride=1, bias=False, width=False):
         assert (in_planes % groups == 0) and (out_planes % groups == 0)
         super().__init__()
