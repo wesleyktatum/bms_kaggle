@@ -91,7 +91,7 @@ class AxialBlock(nn.Module):
     expansion = 2
 
     def __init__(self, inplanes, planes, stride=1, downsample=None, groups=1,
-                 base_width=64, dilation=1, norm_layer=None, kernel_size=56):
+                 base_width=64, dilation=1, norm_layer=None, kernel_size=64):
         super(AxialBlock, self).__init__()
         if norm_layer is None:
             norm_layer = nn.BatchNorm2d
@@ -233,9 +233,8 @@ class AxialAttentionNet(nn.Module):
         print('     -- MaxPool --')
         print('     {}'.format(x.shape))
 
-        x = self.layer1(x)
         print('-- Layer 1 --')
-        print(x.shape)
+        x = self.layer1(x)
         x = self.layer2(x)
         print('-- Layer 2 --')
         print(x.shape)
