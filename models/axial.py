@@ -10,7 +10,7 @@ def conv1x1(in_planes, out_planes, stride=1):
     return nn.Conv2d(in_planes, out_planes, kernel_size=1, stride=stride, bias=False)
 
 class AxialAttention(nn.Module):
-    def __init__(self, in_planes, out_planes, groups=8, kernel_size=56,
+    def __init__(self, in_planes, out_planes, groups=8, kernel_size=64,
                  stride=1, bias=False, width=False):
         assert (in_planes % groups == 0) and (out_planes % groups == 0)
         super().__init__()
@@ -62,8 +62,8 @@ class AxialAttention(nn.Module):
         print('         {}'.format(qkv.shape))
         q, k, v = torch.split(qkv.reshape(N * W, self.groups, self.group_planes * 2, H), [self.group_planes // 2, self.group_planes // 2, self.group_planes], dim=2)
         print('         q - {}'.format(q.shape))
-        print('         q - {}'.format(k.shape))
-        print('         q - {}'.format(v.shape))
+        print('         k - {}'.format(k.shape))
+        print('         v - {}'.format(v.shape))
 
         # Calculate position embedding
         all_embeddings = torch.index_select(self.relative, 1, self.flatten_index).view(self.group_planes * 2, self.kernel_size, self.kernel_size)
@@ -107,7 +107,7 @@ class AxialBlock(nn.Module):
     expansion = 2
 
     def __init__(self, inplanes, planes, stride=1, downsample=None, groups=1,
-                 base_width=64, dilation=1, norm_layer=None, kernel_size=56):
+                 base_width=64, dilation=1, norm_layer=None, kernel_size=64):
         super(AxialBlock, self).__init__()
         if norm_layer is None:
             norm_layer = nn.BatchNorm2d
