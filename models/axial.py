@@ -170,8 +170,6 @@ class AxialAttentionNet(nn.Module):
                                        dilate=replace_stride_with_dilation[1])
         self.layer4 = self._make_layer(block, int(1024 * s), layers[3], stride=2, kernel_size=16,
                                        dilate=replace_stride_with_dilation[2])
-        self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
-        self.fc = nn.Linear(int(1024 * block.expansion * s), num_classes)
 
         for m in self.modules():
             if isinstance(m, (nn.Conv2d, nn.Conv1d)):
@@ -241,16 +239,6 @@ class AxialAttentionNet(nn.Module):
         x = self.layer3(x)
         print('-- Layer 4 --')
         x = self.layer4(x)
-
-        x = self.avgpool(x)
-        print('-- AvgPool --')
-        print(x.shape)
-        x = torch.flatten(x, 1)
-        print('-- Flatten --')
-        print(x.shape)
-        x = self.fc(x)
-        print('-- Dense --')
-        print(x.shape)
 
         return x
 
