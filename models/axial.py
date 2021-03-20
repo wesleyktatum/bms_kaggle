@@ -249,15 +249,12 @@ class AxialAttentionNet(nn.Module):
 
         print('-- Layer 1 --')
         x = self.layer1(x)
-        x = self.layer2(x)
         print('-- Layer 2 --')
-        print(x.shape)
-        x = self.layer3(x)
+        x = self.layer2(x)
         print('-- Layer 3 --')
-        print(x.shape)
-        x = self.layer4(x)
+        x = self.layer3(x)
         print('-- Layer 4 --')
-        print(x.shape)
+        x = self.layer4(x)
 
         x = self.avgpool(x)
         print('-- AvgPool --')
