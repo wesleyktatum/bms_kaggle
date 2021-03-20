@@ -98,3 +98,8 @@ class biLSTM(nn.Module):
             alphas[:batch_size_t, t, :] = alpha
 
         return predictions, encoded_inchis, decode_lengths, alphas, sort_ind
+
+def biLSTM512():
+    model = biLSTM(attention_dim=512, embed_dim=512, decoder_dim=512,
+                   vocab_size=90, dropout=0.5)
+    return model
