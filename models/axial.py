@@ -225,6 +225,7 @@ class AxialAttentionNet(nn.Module):
         print('     -- MaxPool --')
         print('     {}'.format(x.shape))
 
+        print(self.layer1)
         x = self.layer1(x)
         print('-- Layer 1 --')
         print(x.shape)
