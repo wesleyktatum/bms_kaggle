@@ -49,33 +49,17 @@ class AxialAttention(nn.Module):
             x = x.permute(0, 2, 1, 3)
         else:
             x = x.permute(0, 3, 1, 2)  # N, W, C, H
-        print('         -- Permute --')
-        print('         {}'.format(x.shape))
         N, W, C, H = x.shape
         x = x.contiguous().view(N * W, C, H)
-        print('         -- Reshape --')
-        print('         {}'.format(x.shape))
 
         # Transformations
         qkv = self.bn_qkv(self.qkv_transform(x))
-        print('         -- QKV Transform --')
-        print('         {}'.format(qkv.shape))
         q, k, v = torch.split(qkv.reshape(N * W, self.groups, self.group_planes * 2, H), [self.group_planes // 2, self.group_planes // 2, self.group_planes], dim=2)
-        print('         q - {}'.format(q.shape))
-        print('         k - {}'.format(k.shape))
-        print('         v - {}'.format(v.shape))
 
         # Calculate position embedding
         all_embeddings = torch.index_select(self.relative, 1, self.flatten_index).view(self.group_planes * 2, self.kernel_size, self.kernel_size)
         q_embedding, k_embedding, v_embedding = torch.split(all_embeddings, [self.group_planes // 2, self.group_planes // 2, self.group_planes], dim=0)
-        print('         -- Position Embeddings --')
-        print('         all - {}'.format(all_embeddings.shape))
-        print('         q - {}'.format(q_embedding.shape))
-        print('         k - {}'.format(k_embedding.shape))
-        print('         v - {}'.format(v_embedding.shape))
         qr = torch.einsum('bgci,cij->bgij', q, q_embedding)
-        print('         -- QR EinSum --')
-        print('         {}'.format(qr.shape))
         kr = torch.einsum('bgci,cij->bgij', k, k_embedding).transpose(2, 3)
         qk = torch.einsum('bgci, bgcj->bgij', q, k)
         stacked_similarity = torch.cat([qk, qr, kr], dim=1)
@@ -134,8 +118,10 @@ class AxialBlock(nn.Module):
 
         print('     -- AxialAttention (Height) --')
         out = self.hight_block(out)
+        print('     {}'.format(out.shape))
         print('     -- AxialAttention (Width) --')
         out = self.width_block(out)
+        print('     {}'.format(out.shape))
         out = self.relu(out)
 
         out = self.conv_up(out)
