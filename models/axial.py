@@ -215,12 +215,15 @@ class AxialAttentionNet(nn.Module):
         # See note [TorchScript super()]
         print('-- Input Shape --')
         print(x.shape)
+        print('-- Stem --')
         x = self.conv1(x)
+        print('     -- Conv1 --')
+        print('     {}'.format(x.shape))
         x = self.bn1(x)
         x = self.relu(x)
         x = self.maxpool(x)
-        print('-- Stem --')
-        print(x.shape)
+        print('     -- MaxPool --')
+        print('     {}'.format(x.shape))
 
         x = self.layer1(x)
         print('-- Layer 1 --')
