@@ -111,14 +111,22 @@ class AxialBlock(nn.Module):
         identity = x
 
         out = self.conv_down(x)
+        print('     -- ConvDown --')
+        print('     {}'.format(out.shape))
         out = self.bn1(out)
         out = self.relu(out)
 
         out = self.hight_block(out)
+        print('     -- AxialAttention (Height) --')
+        print('     {}'.format(out.shape))
         out = self.width_block(out)
+        print('     -- AxialAttention (Width) --')
+        print('     {}'.format(out.shape))
         out = self.relu(out)
 
         out = self.conv_up(out)
+        print('     -- ConvUp --')
+        print('     {}'.format(out.shape))
         out = self.bn2(out)
 
         if self.downsample is not None:
