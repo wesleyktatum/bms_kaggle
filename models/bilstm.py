@@ -64,7 +64,11 @@ class biLSTM(nn.Module):
 
         # Flatten image
         encoder_out = encoder_out.view(batch_size, -1, encoder_dim)
+        print('--- Flatten EncoderOut ---')
+        print(encoder_out.shape)
         num_pixels = encoder_out.size(1)
+        print('--- Num Pix ---')
+        print(num_pixels)
 
         # Sort input data by decreasing lengths
         inchi_lengths, sort_ind = inchi_lengths.squeeze(1).sort(dim=0, descending=True)
@@ -73,9 +77,14 @@ class biLSTM(nn.Module):
 
         # Embedding
         embeddings = self.embedding(encoded_inchis)
+        print('--- InChI Embeddings ---')
+        print(embeddings.shape)
 
         # Initialize LSTM
         h, c = self.init_hidden_state(encoder_out)
+        print('--- Init Hidden State ---')
+        print('h - {}'.format(h.shape))
+        print('c - {}'.format(c.shape))
 
         decode_lengths = (inchi_lengths - 1).tolist()
 
