@@ -93,8 +93,8 @@ class biLSTM(nn.Module):
         print(max(decode_lengths))
 
         # Create tensors to hold word prediction scores and alphas
-        predictions = torch.zeros(batch_size, max(decode_lengths), vocab_size).to(device)
-        alphas = torch.zeros(batch_size, max(decode_lengths), num_pixels).to(device)
+        predictions = torch.zeros(batch_size, max(decode_lengths), vocab_size)
+        alphas = torch.zeros(batch_size, max(decode_lengths), num_pixels)
 
         for t in range(max(decode_lengths)):
             batch_size_t = sum([l > t for l in decode_lengths])
