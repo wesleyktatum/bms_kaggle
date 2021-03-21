@@ -45,14 +45,13 @@ class MoleculeDataset(Dataset):
 
 
         ### grab inchi
-        inchi_length = torch.zeros((1,1), dtype=torch.int)
         inchi = self.labels.InChI.values[i]
         inchi = inchi.split('InChI=1S/')[1]
         inchi = ''.join(inchi)
         tokenized_inchi = tokenize_inchi(inchi)
         tokenized_inchi = ['<sos>'] + tokenized_inchi
         tokenized_inchi += ['<eos>']
-        inchi_length[0,0] = len(tokenized_inchi)
+        inchi_length = torch.tensor(len(tokenized_inchi))
         encoded_inchi = torch.tensor(encode_inchi(tokenized_inchi, self.max_inchi_len, self.char_dict))
         return img, encoded_inchi, inchi_length
 
