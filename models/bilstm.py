@@ -58,19 +58,13 @@ class biLSTM(nn.Module):
         return h, c
 
     def forward(self, encoder_out, encoded_inchis, inchi_lengths):
-        print('--- Input Shape ---')
-        print(encoder_out.shape)
         batch_size = encoder_out.size(0)
         encoder_dim = encoder_out.size(-1)
         vocab_size = self.vocab_size
 
         # Flatten image
         encoder_out = encoder_out.view(batch_size, -1, encoder_dim)
-        print('--- Flatten EncoderOut ---')
-        print(encoder_out.shape)
         num_pixels = encoder_out.size(1)
-        print('--- Num Pix ---')
-        print(num_pixels)
 
         # Sort input data by decreasing lengths
         inchi_lengths, sort_ind = inchi_lengths.squeeze(1).sort(dim=0, descending=True)
@@ -79,33 +73,20 @@ class biLSTM(nn.Module):
 
         # Embedding
         embeddings = self.embedding(encoded_inchis)
-        print('--- InChI Embeddings ---')
-        print(embeddings.shape)
 
         # Initialize LSTM
         h, c = self.init_hidden_state(encoder_out)
-        print('--- Init Hidden State ---')
-        print('h - {}'.format(h.shape))
-        print('c - {}'.format(c.shape))
 
         decode_lengths = (inchi_lengths - 1).tolist()
-        print('-- Max Decode Length --')
-        print(max(decode_lengths))
 
         # Create tensors to hold word prediction scores and alphas
         predictions = torch.zeros(batch_size, max(decode_lengths), vocab_size)
         alphas = torch.zeros(batch_size, max(decode_lengths), num_pixels)
 
         for t in range(max(decode_lengths)):
-            print('-- Iteration {} --'.format(t))
             batch_size_t = sum([l > t for l in decode_lengths])
-            print('-- Batch Size T --')
-            print(batch_size_t)
             attention_weighted_encoding, alpha = self.attention(encoder_out[:batch_size_t],
                                                                 h[:batch_size_t])
-            print('-- Attention Out --')
-            print('Att - {}'.format(attention_weighted_encoding.shape))
-            print('Alpha - {}'.format(alpha.shape))
             gate = self.sigmoid(self.f_beta(h[:batch_size_t]))
             attention_weighted_encoding = gate * attention_weighted_encoding
             h, c = self.decode_step(

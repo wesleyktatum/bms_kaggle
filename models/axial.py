@@ -111,22 +111,14 @@ class AxialBlock(nn.Module):
         identity = x
 
         out = self.conv_down(x)
-        print('     -- ConvDown --')
-        print('     {}'.format(out.shape))
         out = self.bn1(out)
         out = self.relu(out)
 
-        print('     -- AxialAttention (Height) --')
         out = self.hight_block(out)
-        print('     {}'.format(out.shape))
-        print('     -- AxialAttention (Width) --')
         out = self.width_block(out)
-        print('     {}'.format(out.shape))
         out = self.relu(out)
 
         out = self.conv_up(out)
-        print('     -- ConvUp --')
-        print('     {}'.format(out.shape))
         out = self.bn2(out)
 
         if self.downsample is not None:
@@ -219,25 +211,14 @@ class AxialAttentionNet(nn.Module):
 
     def _forward_impl(self, x):
         # See note [TorchScript super()]
-        print('-- Input Shape --')
-        print(x.shape)
-        print('-- Stem --')
         x = self.conv1(x)
-        print('     -- Conv1 --')
-        print('     {}'.format(x.shape))
         x = self.bn1(x)
         x = self.relu(x)
         x = self.maxpool(x)
-        print('     -- MaxPool --')
-        print('     {}'.format(x.shape))
 
-        print('-- Layer 1 --')
         x = self.layer1(x)
-        print('-- Layer 2 --')
         x = self.layer2(x)
-        print('-- Layer 3 --')
         x = self.layer3(x)
-        print('-- Layer 4 --')
         x = self.layer4(x)
 
         return x
