@@ -89,6 +89,8 @@ class biLSTM(nn.Module):
         print('c - {}'.format(c.shape))
 
         decode_lengths = (inchi_lengths - 1).tolist()
+        print('-- Max Decode Length --')
+        print(max(decode_lengths))
 
         # Create tensors to hold word prediction scores and alphas
         predictions = torch.zeros(batch_size, max(decode_lengths), vocab_size).to(device)
