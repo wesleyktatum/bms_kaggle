@@ -97,9 +97,15 @@ class biLSTM(nn.Module):
         alphas = torch.zeros(batch_size, max(decode_lengths), num_pixels)
 
         for t in range(max(decode_lengths)):
+            print('-- Iteration {} --'.format(t))
             batch_size_t = sum([l > t for l in decode_lengths])
+            print('-- Batch Size T --')
+            print(batch_size_t)
             attention_weighted_encoding, alpha = self.attention(encoder_out[:batch_size_t],
                                                                 h[:batch_size_t])
+            print('-- Attention Out --')
+            print('Att - {}'.format(attention_weighted_encoding.shape))
+            print('Alpha - {}'.format(alpha.shape))
             gate = self.sigmoid(self.f_beta(h[:batch_size_t]))
             attention_weighted_encoding = gate * attention_weighted_encoding
             h, c = self.decode_step(
