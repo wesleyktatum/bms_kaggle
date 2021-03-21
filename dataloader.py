@@ -45,7 +45,7 @@ class MoleculeDataset(Dataset):
 
 
         ### grab inchi
-        inchi_length = torch.zeros((1,1))
+        inchi_length = torch.zeros((1,1), dtype=torch.int)
         inchi = self.labels.InChI.values[i]
         inchi = inchi.split('InChI=1S/')[1]
         inchi = ''.join(inchi)
