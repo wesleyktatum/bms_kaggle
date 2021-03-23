@@ -62,9 +62,11 @@ def main(args):
     mol_val = MoleculeDataset('{}/val.csv'.format(args.data_dir),
                               train_dir, char_dict, args.max_inchi_length)
     train_loader = torch.utils.data.DataLoader(mol_train, batch_size=args.batch_size,
-                                               shuffle=True)
+                                               shuffle=True, num_workers=0,
+                                               pin_memory=False, drop_last=True)
     val_loader = torch.utils.data.DataLoader(mol_val, batch_size=args.batch_size,
-                                             shuffle=True)
+                                             shuffle=True, num_workers=0,
+                                             pin_memory=False, drop_last=True)
 
     optimizer = torch.optim.Adam(params=model.parameters(), lr=args.lr)
 
