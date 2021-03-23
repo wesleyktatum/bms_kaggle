@@ -123,8 +123,8 @@ def train(train_loader, model, optimizer, epoch, args):
         optimizer.zero_grad()
         stop_time = perf_counter()
         batch_time = round(stop_time - start_time, 5)
-        avg_loss = np.mean(avg_losses)
-        avg_acc = np.mean(avg_accs)
+        avg_loss = round(np.mean(avg_losses), 5)
+        avg_acc = round(np.mean(avg_accs), 2)
         losses.append(avg_loss)
 
         # Log
@@ -174,8 +174,8 @@ def validate(val_loader, model, epoch, args):
 
         stop_time = perf_counter()
         batch_time = round(stop_time - start_time, 5)
-        avg_loss = np.mean(avg_losses)
-        avg_acc = np.mean(avg_accs)
+        avg_loss = round(np.mean(avg_losses), 5)
+        avg_acc = round(np.mean(avg_accs), 2)
         losses.append(avg_loss)
 
         # Log
