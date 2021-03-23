@@ -45,7 +45,7 @@ def main(args):
         already_wrote = False
     log_file = open(args.log_fn, 'a')
     if not already_wrote:
-        log_file.write('epoch,batch_idx,data_type,loss,acc,run_time\n')
+        log_file.write('epoch,batch_idx,data_type,loss,run_time\n')
     log_file.close()
 
     if args.checkpoint_fn is not None:
@@ -113,10 +113,10 @@ def train(train_loader, model, optimizer, epoch, args):
             loss += args.alpha_c * ((1. - alphas.sum(dim=1))**2).mean()
 
             loss.backward()
-            acc = accuracy(preds, targets, 1)
+            # acc = accuracy(preds, targets, 1)
 
             avg_losses.append(loss.item())
-            avg_accs.append(acc)
+            # avg_accs.append(acc)
 
         if args.grad_clip is not None:
             clip_gradient(optimizer, args.grad_clip)
@@ -126,15 +126,14 @@ def train(train_loader, model, optimizer, epoch, args):
         stop_time = perf_counter()
         batch_time = round(stop_time - start_time, 5)
         avg_loss = round(np.mean(avg_losses), 5)
-        avg_acc = round(np.mean(avg_accs), 2)
+        # avg_acc = round(np.mean(avg_accs), 2)
         losses.append(avg_loss)
 
         # Log
         log_file = open(args.log_fn, 'a')
-        log_file.write('{},{},{},{},{},{}\n'.format(epoch,
+        log_file.write('{},{},{},{},{}\n'.format(epoch,
                                                     i, 'train',
                                                     avg_loss,
-                                                    avg_acc,
                                                     batch_time))
         log_file.close()
 
@@ -149,47 +148,47 @@ def validate(val_loader, model, epoch, args):
     start_time = perf_counter()
     losses = []
 
-    for i, (batch_imgs, batch_encoded_inchis, batch_inchi_lengths) in enumerate(val_loader):
-        avg_losses = []
-        avg_accs = []
-        for j in range(args.batch_chunks):
-            imgs = batch_imgs[j*args.chunk_size:(j+1)*args.chunk_size,:,:,:]
-            encoded_inchis = batch_encoded_inchis[j*args.chunk_size:(j+1)*args.chunk_size,:]
-            inchi_lengths = batch_inchi_lengths[j*args.chunk_size:(j+1)*args.chunk_size]
-            imgs = imgs.to(DEVICE)
-            encoded_inchis = encoded_inchis.to(DEVICE)
-            inchi_lengths = inchi_lengths.unsqueeze(1).to(DEVICE)
+    with torch.no_grad():
+        for i, (batch_imgs, batch_encoded_inchis, batch_inchi_lengths) in enumerate(val_loader):
+            avg_losses = []
+            avg_accs = []
+            for j in range(args.batch_chunks):
+                imgs = batch_imgs[j*args.chunk_size:(j+1)*args.chunk_size,:,:,:]
+                encoded_inchis = batch_encoded_inchis[j*args.chunk_size:(j+1)*args.chunk_size,:]
+                inchi_lengths = batch_inchi_lengths[j*args.chunk_size:(j+1)*args.chunk_size]
+                imgs = imgs.to(DEVICE)
+                encoded_inchis = encoded_inchis.to(DEVICE)
+                inchi_lengths = inchi_lengths.unsqueeze(1).to(DEVICE)
 
-            preds, encoded_inchis, decode_lengths, alphas, sort_ind = model(imgs, encoded_inchis, inchi_lengths)
+                preds, encoded_inchis, decode_lengths, alphas, sort_ind = model(imgs, encoded_inchis, inchi_lengths)
 
-            targets = encoded_inchis[:,1:]
+                targets = encoded_inchis[:,1:]
 
-            preds = pack_padded_sequence(preds, decode_lengths, batch_first=True).data
-            targets = pack_padded_sequence(targets, decode_lengths, batch_first=True).data
+                preds = pack_padded_sequence(preds, decode_lengths, batch_first=True).data
+                targets = pack_padded_sequence(targets, decode_lengths, batch_first=True).data
 
-            loss = ce_loss(targets, preds, args.char_weights)
-            loss += args.alpha_c * ((1. - alphas.sum(dim=1))**2).mean()
+                loss = ce_loss(targets, preds, args.char_weights)
+                loss += args.alpha_c * ((1. - alphas.sum(dim=1))**2).mean()
 
-            acc = accuracy(preds, targets, 1)
-            avg_losses.append(loss.item())
-            avg_accs.append(acc)
+                # acc = accuracy(preds, targets, 1)
+                avg_losses.append(loss.item())
+                # avg_accs.append(acc)
 
-        stop_time = perf_counter()
-        batch_time = round(stop_time - start_time, 5)
-        avg_loss = round(np.mean(avg_losses), 5)
-        avg_acc = round(np.mean(avg_accs), 2)
-        losses.append(avg_loss)
+            stop_time = perf_counter()
+            batch_time = round(stop_time - start_time, 5)
+            avg_loss = round(np.mean(avg_losses), 5)
+            # avg_acc = round(np.mean(avg_accs), 2)
+            losses.append(avg_loss)
 
-        # Log
-        log_file = open(args.log_fn, 'a')
-        log_file.write('{},{},{},{},{},{}\n'.format(epoch,
-                                                    i, 'val',
-                                                    avg_loss,
-                                                    avg_acc,
-                                                    batch_time))
-        log_file.close()
+            # Log
+            log_file = open(args.log_fn, 'a')
+            log_file.write('{},{},{},{},{}\n'.format(epoch,
+                                                        i, 'val',
+                                                        avg_loss,
+                                                        batch_time))
+            log_file.close()
 
-        start_time = perf_counter()
+            start_time = perf_counter()
 
     val_loss = np.mean(losses)
     return val_loss
@@ -211,14 +210,14 @@ if __name__ == '__main__':
     parser.add_argument('--test_dir', type=str, default='test_resize')
     parser.add_argument('--log_dir', type=str, default='logs')
     parser.add_argument('--save_dir', type=str, default='checkpoints')
-    parser.add_argument('--save_freq', type=int, default=10)
+    parser.add_argument('--save_freq', type=int, default=1)
     parser.add_argument('--checkpoint_fn', type=str, default=None)
     parser.add_argument('--model_name', type=str, default=None)
     parser.add_argument('--max_inchi_length', type=int, default=350)
     parser.add_argument('--batch_size', type=int, default=256)
     parser.add_argument('--batch_chunks', type=int, default=16)
     parser.add_argument('--lr', type=float, default=1e-4)
-    parser.add_argument('--n_epochs', type=int, default=60)
+    parser.add_argument('--n_epochs', type=int, default=5)
     parser.add_argument('--grad_clip', type=float, default=5.)
     parser.add_argument('--alpha_c', type=float, default=1.)
 
