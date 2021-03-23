@@ -74,7 +74,6 @@ class MoleculeDataset(Dataset):
         vertices, window_list = get_vertices(img, window_size = 7,
                                              window_mask = True,
                                              window_list = True)
-    #     vertices = util.get_vertices(img, window_size = 3, window_mask = False)
 
         closed = closing(prebinarized)
 

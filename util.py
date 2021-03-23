@@ -166,18 +166,38 @@ def edge_detect(img):
 
 def get_window_mask(x, y, vertex_map, window_size = 5):
     n_rows = (window_size * 2) + 1
+    if x - window_size < 0:
+        x_start = 0
+    else:
+        x_start = x - window_size
+    if x + window_size >= 256:
+        x_stop = 255
+    else:
+        x_stop = x + window_size
     for i in range(n_rows):
         if i <= window_size-1:
             row = y - (window_size - i)
-            vertex_map[(x-window_size):(x+window_size), row] = 1
+            if row < 0:
+                row = 0
+            if row >= 256:
+                row = 255
+            vertex_map[x_start:x_stop, row] = 1
 
         if i == (window_size + 1):
             row = y
-            vertex_map[(x-window_size):(x+window_size), row] = 1
+            if row < 0:
+                row = 0
+            if row >= 256:
+                row = 255
+            vertex_map[x_start:x_stop, row] = 1
 
         if i >= (window_size + 1):
             row = y + (i - window_size)
-            vertex_map[(x-window_size):(x+window_size), row] = 1
+            if row < 0:
+                row = 0
+            if row >= 256:
+                row = 255
+            vertex_map[x_start:x_stop, row] = 1
 
     return vertex_map
 
