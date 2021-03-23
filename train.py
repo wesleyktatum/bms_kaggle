@@ -106,6 +106,7 @@ def train(train_loader, model, optimizer, epoch, args):
                 preds, encoded_inchis, decode_lengths, alphas, sort_ind = model(imgs, encoded_inchis, inchi_lengths)
 
                 targets = encoded_inchis[:,1:]
+                print(preds.get_device(), targets.get_device(), args.char_weights.get_device())
 
                 preds = pack_padded_sequence(preds, decode_lengths, batch_first=True).data
                 targets = pack_padded_sequence(targets, decode_lengths, batch_first=True).data
