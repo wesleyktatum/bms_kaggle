@@ -52,7 +52,7 @@ def main(args):
         pass
     else:
         encoder = axial26s()
-        decoder = biLSTM512(vocab_size=vocab_size)
+        decoder = biLSTM512(vocab_size=vocab_size, device=DEVICE)
         model = CaptionModel(encoder, decoder)
         start_epoch = 0
 

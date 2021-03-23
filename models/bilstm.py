@@ -21,7 +21,8 @@ class Attention(nn.Module):
 
 
 class biLSTM(nn.Module):
-    def __init__(self, attention_dim, embed_dim, decoder_dim, vocab_size, encoder_dim=1024, dropout=0.5):
+    def __init__(self, attention_dim, embed_dim, decoder_dim, vocab_size, device,
+                 encoder_dim=1024, dropout=0.5):
         super().__init__()
         self.encoder_dim = encoder_dim
         self.attention_dim = attention_dim
@@ -29,6 +30,7 @@ class biLSTM(nn.Module):
         self.decoder_dim = decoder_dim
         self.vocab_size = vocab_size
         self.dropout = dropout
+        self.device = device
 
         self.attention = Attention(encoder_dim, decoder_dim, attention_dim)
         self.embedding = nn.Embedding(vocab_size, embed_dim)
@@ -79,8 +81,8 @@ class biLSTM(nn.Module):
         decode_lengths = (inchi_lengths - 1).tolist()
 
         # Create tensors to hold word prediction scores and alphas
-        predictions = torch.zeros(batch_size, max(decode_lengths), vocab_size)
-        alphas = torch.zeros(batch_size, max(decode_lengths), num_pixels)
+        predictions = torch.zeros(batch_size, max(decode_lengths), vocab_size).to(self.device)
+        alphas = torch.zeros(batch_size, max(decode_lengths), num_pixels).to(self.device)
 
         for t in range(max(decode_lengths)):
             batch_size_t = sum([l > t for l in decode_lengths])
