@@ -33,7 +33,7 @@ class MoleculeDataset(Dataset):
         if self.rotate:
             angles = [0, 90, 180, 270]
             angle = np.random.choice(angles, size=1, p=[1 - self.p, self.p / 3, self.p / 3, self.p / 3])
-            img = TF.rotate(img, angle)
+            img = TF.rotate(img, angle, fill=(0,))
 
         img = np.array(img)
         img = invert_and_normalize(img)
@@ -41,13 +41,11 @@ class MoleculeDataset(Dataset):
         if self.do_transform:
             img = self.transform(img)
         img = torch.tensor(img)
-        img = img.permute(2, 0, 1)
+        img = img.permute(2, 0, 1).float()
 
 
         ### grab inchi
         inchi = self.labels.InChI.values[i]
-        inchi = inchi.split('InChI=1S/')[1]
-        inchi = ''.join(inchi)
         tokenized_inchi = tokenize_inchi(inchi)
         tokenized_inchi = ['<sos>'] + tokenized_inchi
         tokenized_inchi += ['<eos>']

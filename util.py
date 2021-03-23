@@ -5,6 +5,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from skimage import feature, filters, morphology
+from sklearn.preprocessing import MinMaxScaler, StandardScaler
 
 def get_path_from_img_id(img_id, DIR):
     img_path = os.path.join(DIR, img_id[0], img_id[1], img_id[2], '{}.png'.format(img_id))
@@ -47,6 +48,8 @@ def calc_data_mean_std(img_ids, DIR):
 def tokenize_inchi(inchi):
     pattern =  "(\[[^\]]+]|Br?|Cl?|Si?|N|H|O|S|P|F|I|D|T|b|c|n|o|s|p|h|t|m|i|\(|\)|\.|=|#|-|,|\+|\\\\|\/|_|:|~|@|\?|>|\*|\$|1[0-9]|2[0-9]|[0-9])"
     regezz = re.compile(pattern)
+    inchi = inchi.split('InChI=1S/')[1]
+    inchi = ''.join(inchi)
     tokens = [token for token in regezz.findall(inchi)]
     assert inchi == ''.join(tokens), ("{} could not be joined -> {}".format(inchi, tokens))
     return tokens
@@ -57,6 +60,60 @@ def encode_inchi(inchi, max_len, char_dict):
         inchi.append('<pad>')
     inchi_vec = [char_dict[c] for c in inchi]
     return inchi_vec
+
+def get_char_weights(train_inchis, params, freq_penalty=0.5):
+    "Calculates token weights for a set of input data"
+    char_dist = {}
+    char_counts = np.zeros((params['NUM_CHAR'],))
+    char_weights = np.zeros((params['NUM_CHAR'],))
+    for k in params['CHAR_DICT'].keys():
+        char_dist[k] = 0
+    for inchi in train_inchis:
+        for i, char in enumerate(inchi):
+            char_dist[char] += 1
+        for j in range(i, params['MAX_LENGTH']):
+            char_dist['<pad>'] += 1
+    for i, v in enumerate(char_dist.values()):
+        char_counts[i] = v
+    top = np.sum(np.log(char_counts))
+    for i in range(char_counts.shape[0]):
+        char_weights[i] = top / np.log(char_counts[i])
+    min_weight = char_weights.min()
+    for i, w in enumerate(char_weights):
+        if w > 2*min_weight:
+            char_weights[i] = 2*min_weight
+    scaler = MinMaxScaler([freq_penalty,1.0])
+    char_weights = scaler.fit_transform(char_weights.reshape(-1, 1))
+    return char_weights[:,0]
+
+def clip_gradient(optimizer, grad_clip):
+    for group in optimizer.param_groups:
+        for param in group['params']:
+            if param.grad is not None:
+                param.grad.data.clamp_(-grad_clip, grad_clip)
+
+def accuracy(scores, targets, k):
+    batch_size = targets.size(0)
+    _, ind = scores.topk(k, 1, True, True)
+    correct = ind.eq(targets.view(-1, 1).expand_as(ind))
+    correct_total = correct.view(-1).float().sum()
+    return correct_total.item() * (100.0 / batch_size)
+
+class AverageMeter(object):
+    def __init__(self):
+        self.reset()
+
+    def reset(self):
+        self.val = 0
+        self.avg = 0
+        self.sum = 0
+        self.count = 0
+
+    def update(self, val, n=1):
+        self.val = val
+        self.sum += val * n
+        self.count += n
+        self.avg = self.sum / self.count
 
 
 ########################################################
@@ -179,21 +236,20 @@ def get_vertices(img, window_size = 7, window_mask = True, window_list = True):
             return vertex_windows
     else:
         return vertex_map
-    
-    
+
+
 def morph_around_windows(img, windows, morph_function):
     """
     Ensure that window_list only contains windows that are to be avoided during
     morphological operations (e.g. closing). window mask is created and morph_function
     is applied to resulting image
     """
-    
+
     vertex_mask, _ = get_vertex_map(windows['coordinates'], img, window_size = 5,
                                     window_list = False)
-    
-    morphed_img = morph_function(img)
-    
-    final_img = np.where(vertex_mask == 1, img, morphed_img)
-    
-    return final_img
 
+    morphed_img = morph_function(img)
+
+    final_img = np.where(vertex_mask == 1, img, morphed_img)
+
+    return final_img

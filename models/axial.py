@@ -219,7 +219,8 @@ class AxialAttentionNet(nn.Module):
         x = self.layer1(x)
         x = self.layer2(x)
         x = self.layer3(x)
-        x = self.layer4(x)
+        x = self.layer4(x) # (batch_size, channels - 1024, xdim - 8, ydim - 8)
+        x = x.permute(0, 2, 3, 1) # (batch_size, xdim, ydim, channels)
 
         return x
 

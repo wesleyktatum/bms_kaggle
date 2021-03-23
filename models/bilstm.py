@@ -1,7 +1,6 @@
 import torch
 from torch import nn
 
-
 class Attention(nn.Module):
     def __init__(self, encoder_dim, decoder_dim, attention_dim):
         super().__init__()
