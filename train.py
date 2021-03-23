@@ -92,54 +92,51 @@ def train(train_loader, model, optimizer, epoch, args):
     for i, (batch_imgs, batch_encoded_inchis, batch_inchi_lengths) in enumerate(train_loader):
         avg_losses = []
         avg_accs = []
-        if i > 0:
-            break
-        else:
-            for j in range(args.batch_chunks):
-                imgs = batch_imgs[j*args.chunk_size:(j+1)*args.chunk_size,:,:,:]
-                encoded_inchis = batch_encoded_inchis[j*args.chunk_size:(j+1)*args.chunk_size,:]
-                inchi_lengths = batch_inchi_lengths[j*args.chunk_size:(j+1)*args.chunk_size]
-                imgs = imgs.to(DEVICE)
-                encoded_inchis = encoded_inchis.to(DEVICE)
-                inchi_lengths = inchi_lengths.unsqueeze(1).to(DEVICE)
+        for j in range(args.batch_chunks):
+            imgs = batch_imgs[j*args.chunk_size:(j+1)*args.chunk_size,:,:,:]
+            encoded_inchis = batch_encoded_inchis[j*args.chunk_size:(j+1)*args.chunk_size,:]
+            inchi_lengths = batch_inchi_lengths[j*args.chunk_size:(j+1)*args.chunk_size]
+            imgs = imgs.to(DEVICE)
+            encoded_inchis = encoded_inchis.to(DEVICE)
+            inchi_lengths = inchi_lengths.unsqueeze(1).to(DEVICE)
 
-                preds, encoded_inchis, decode_lengths, alphas, sort_ind = model(imgs, encoded_inchis, inchi_lengths)
+            preds, encoded_inchis, decode_lengths, alphas, sort_ind = model(imgs, encoded_inchis, inchi_lengths)
 
-                targets = encoded_inchis[:,1:]
+            targets = encoded_inchis[:,1:]
 
-                preds = pack_padded_sequence(preds, decode_lengths, batch_first=True).data
-                targets = pack_padded_sequence(targets, decode_lengths, batch_first=True).data
+            preds = pack_padded_sequence(preds, decode_lengths, batch_first=True).data
+            targets = pack_padded_sequence(targets, decode_lengths, batch_first=True).data
 
-                loss = ce_loss(targets, preds, args.char_weights)
-                loss += args.alpha_c * ((1. - alphas.sum(dim=1))**2).mean()
+            loss = ce_loss(targets, preds, args.char_weights)
+            loss += args.alpha_c * ((1. - alphas.sum(dim=1))**2).mean()
 
-                loss.backward()
-                acc = accuracy(preds, targets, 1)
+            loss.backward()
+            acc = accuracy(preds, targets, 1)
 
-                avg_losses.append(loss.item())
-                avg_accs.append(acc)
+            avg_losses.append(loss.item())
+            avg_accs.append(acc)
 
-            if args.grad_clip is not None:
-                clip_gradient(optimizer, args.grad_clip)
+        if args.grad_clip is not None:
+            clip_gradient(optimizer, args.grad_clip)
 
-            optimizer.step()
-            optimizer.zero_grad()
-            stop_time = perf_counter()
-            batch_time = round(stop_time - start_time, 5)
-            avg_loss = np.mean(avg_losses)
-            avg_acc = np.mean(avg_accs)
-            losses.append(avg_loss)
+        optimizer.step()
+        optimizer.zero_grad()
+        stop_time = perf_counter()
+        batch_time = round(stop_time - start_time, 5)
+        avg_loss = np.mean(avg_losses)
+        avg_acc = np.mean(avg_accs)
+        losses.append(avg_loss)
 
-            # Log
-            log_file = open(args.log_fn, 'a')
-            log_file.write('{},{},{},{},{},{}\n'.format(epoch,
-                                                        i, 'train',
-                                                        avg_loss,
-                                                        avg_acc,
-                                                        batch_time))
-            log_file.close()
+        # Log
+        log_file = open(args.log_fn, 'a')
+        log_file.write('{},{},{},{},{},{}\n'.format(epoch,
+                                                    i, 'train',
+                                                    avg_loss,
+                                                    avg_acc,
+                                                    batch_time))
+        log_file.close()
 
-            start_time = perf_counter()
+        start_time = perf_counter()
 
     train_loss = np.mean(losses)
     return train_loss
@@ -153,47 +150,44 @@ def validate(val_loader, model, epoch, args):
     for i, (batch_imgs, batch_encoded_inchis, batch_inchi_lengths) in enumerate(val_loader):
         avg_losses = []
         avg_accs = []
-        if i > 0:
-            break
-        else:
-            for j in range(args.batch_chunks):
-                imgs = batch_imgs[j*args.chunk_size:(j+1)*args.chunk_size,:,:,:]
-                encoded_inchis = batch_encoded_inchis[j*args.chunk_size:(j+1)*args.chunk_size,:]
-                inchi_lengths = batch_inchi_lengths[j*args.chunk_size:(j+1)*args.chunk_size]
-                imgs = imgs.to(DEVICE)
-                encoded_inchis = encoded_inchis.to(DEVICE)
-                inchi_lengths = inchi_lengths.unsqueeze(1).to(DEVICE)
+        for j in range(args.batch_chunks):
+            imgs = batch_imgs[j*args.chunk_size:(j+1)*args.chunk_size,:,:,:]
+            encoded_inchis = batch_encoded_inchis[j*args.chunk_size:(j+1)*args.chunk_size,:]
+            inchi_lengths = batch_inchi_lengths[j*args.chunk_size:(j+1)*args.chunk_size]
+            imgs = imgs.to(DEVICE)
+            encoded_inchis = encoded_inchis.to(DEVICE)
+            inchi_lengths = inchi_lengths.unsqueeze(1).to(DEVICE)
 
-                preds, encoded_inchis, decode_lengths, alphas, sort_ind = model(imgs, encoded_inchis, inchi_lengths)
+            preds, encoded_inchis, decode_lengths, alphas, sort_ind = model(imgs, encoded_inchis, inchi_lengths)
 
-                targets = encoded_inchis[:,1:]
+            targets = encoded_inchis[:,1:]
 
-                preds = pack_padded_sequence(preds, decode_lengths, batch_first=True).data
-                targets = pack_padded_sequence(targets, decode_lengths, batch_first=True).data
+            preds = pack_padded_sequence(preds, decode_lengths, batch_first=True).data
+            targets = pack_padded_sequence(targets, decode_lengths, batch_first=True).data
 
-                loss = ce_loss(targets, preds, args.char_weights)
-                loss += args.alpha_c * ((1. - alphas.sum(dim=1))**2).mean()
+            loss = ce_loss(targets, preds, args.char_weights)
+            loss += args.alpha_c * ((1. - alphas.sum(dim=1))**2).mean()
 
-                acc = accuracy(preds, targets, 1)
-                avg_losses.append(loss.item())
-                avg_accs.append(acc)
+            acc = accuracy(preds, targets, 1)
+            avg_losses.append(loss.item())
+            avg_accs.append(acc)
 
-            stop_time = perf_counter()
-            batch_time = round(stop_time - start_time, 5)
-            avg_loss = np.mean(avg_losses)
-            avg_acc = np.mean(avg_accs)
-            losses.append(avg_loss)
+        stop_time = perf_counter()
+        batch_time = round(stop_time - start_time, 5)
+        avg_loss = np.mean(avg_losses)
+        avg_acc = np.mean(avg_accs)
+        losses.append(avg_loss)
 
-            # Log
-            log_file = open(args.log_fn, 'a')
-            log_file.write('{},{},{},{},{},{}\n'.format(epoch,
-                                                        i, 'val',
-                                                        avg_loss,
-                                                        avg_acc,
-                                                        batch_time))
-            log_file.close()
+        # Log
+        log_file = open(args.log_fn, 'a')
+        log_file.write('{},{},{},{},{},{}\n'.format(epoch,
+                                                    i, 'val',
+                                                    avg_loss,
+                                                    avg_acc,
+                                                    batch_time))
+        log_file.close()
 
-            start_time = perf_counter()
+        start_time = perf_counter()
 
     val_loss = np.mean(losses)
     return val_loss
