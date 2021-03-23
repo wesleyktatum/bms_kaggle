@@ -34,7 +34,7 @@ def main(args):
     os.makedirs(args.log_dir, exist_ok=True)
     os.makedirs(args.save_dir, exist_ok=True)
     if args.model_name is not None:
-        args.log_fn = '{}/log{}.txt'.format(args.log_dir, '_'+args.name)
+        args.log_fn = '{}/log{}.txt'.format(args.log_dir, '_'+args.model_name)
     else:
         args.log_fn = '{}/log.txt'.format(args.log_dir)
     try:
