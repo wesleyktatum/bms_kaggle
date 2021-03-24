@@ -1,4 +1,5 @@
 import os
+from time import perfcounter
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -26,24 +27,39 @@ class MoleculeDataset(Dataset):
     def __getitem__(self, i):
         ### grab image
         img_id = self.labels.image_id.values[i]
+        open_img_start = perfcounter()
         img_path = get_path_from_img_id(img_id, self.source_dir)
         img = Image.open(img_path)
+        open_img_end = perfcounter()
+        open_img_time = open_img_end - open_img_start
+        convert_img_start = perfcounter()
         img = img.convert('L')
+        convert_img_end = perfcounter()
+        convert_img_time = convert_img_end - convert_img_start
 
+        rotate_img_start = perf_counter()
         if self.rotate:
             angles = [0, 90, 180, 270]
             angle = np.random.choice(angles, size=1, p=[1 - self.p, self.p / 3, self.p / 3, self.p / 3])
             img = TF.rotate(img, angle, fill=(0,))
+        rotate_img_end = perf_counter()
+        rotate_img_time = rotate_img_end - rotate_img_start
 
+        invert_img_start = perf_counter()
         img = np.array(img)
         img = invert_and_normalize(img)
+        invert_img_end = perf_counter()
+        invert_img_time = invert_img_end - invert_img_start
 
+        transform_img_start = perf_counter()
         if self.do_transform:
             img = self.transform(img)
+        transform_img_end = perf_counter()
+        transform_img_time = transform_img_end - transform_img_start
         img = torch.tensor(img)
         img = img.permute(2, 0, 1).float()
 
-
+        encode_inchi_start = perf_counter()
         ### grab inchi
         inchi = self.labels.InChI.values[i]
         tokenized_inchi = tokenize_inchi(inchi)
@@ -51,6 +67,16 @@ class MoleculeDataset(Dataset):
         tokenized_inchi += ['<eos>']
         inchi_length = torch.tensor(len(tokenized_inchi))
         encoded_inchi = torch.tensor(encode_inchi(tokenized_inchi, self.max_inchi_len, self.char_dict))
+        encode_inchi_end = perf_counter()
+        encode_inchi_time = encode_inchi_end - encode_inchi_start
+        log_file = open('logs/log_dataloader_times.txt', 'a')
+        log_file.write('{},{},{},{},{},{},{}\n'.format(i, open_img_time,
+                                                       convert_img_time,
+                                                       rotate_img_time,
+                                                       invert_img_time,
+                                                       transform_img_time,
+                                                       encode_inchi_time))
+        log_file.close()
         return img, encoded_inchi, inchi_length
 
 
