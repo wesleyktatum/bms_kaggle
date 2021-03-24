@@ -72,17 +72,17 @@ def main(args):
 
     for epoch in range(start_epoch, start_epoch+args.n_epochs):
         train_loss = train(train_loader, model, optimizer, epoch, args)
-        val_loss = validate(val_loader, model, epoch, args)
-        print('Epoch - {} Train - {}, Val - {}'.format(epoch, train_loss, val_loss))
-        if (epoch+1) % args.save_freq == 0:
-            epoch_str = str(epoch+1)
-            while len(epoch_str) < 3:
-                epoch_str = '0' + epoch_str
-            if args.model_name is not None:
-                save_fn = os.path.join(args.save_dir, 'model_'+args.model_name+epoch_str+'.ckpt')
-            else:
-                save_fn = os.path.join(args.save_dir, 'model_'+epoch_str+'.ckpt')
-            save(model, optimizer, args, epoch+1, save_fn)
+        # val_loss = validate(val_loader, model, epoch, args)
+        # print('Epoch - {} Train - {}, Val - {}'.format(epoch, train_loss, val_loss))
+        # if (epoch+1) % args.save_freq == 0:
+        #     epoch_str = str(epoch+1)
+        #     while len(epoch_str) < 3:
+        #         epoch_str = '0' + epoch_str
+        #     if args.model_name is not None:
+        #         save_fn = os.path.join(args.save_dir, 'model_'+args.model_name+epoch_str+'.ckpt')
+        #     else:
+        #         save_fn = os.path.join(args.save_dir, 'model_'+epoch_str+'.ckpt')
+        #     save(model, optimizer, args, epoch+1, save_fn)
 
 
 def train(train_loader, model, optimizer, epoch, args):
