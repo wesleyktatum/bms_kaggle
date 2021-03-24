@@ -1,5 +1,5 @@
 import os
-from time import perfcounter
+from time import perf_counter
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
