@@ -2,6 +2,7 @@ import os
 import re
 import json
 import numpy as np
+from PIL import Image
 import matplotlib.pyplot as plt
 
 from skimage import feature, filters, morphology
