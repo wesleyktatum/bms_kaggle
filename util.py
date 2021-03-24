@@ -297,4 +297,5 @@ def preprocess(img_path, extensive=False):
         img = np.dstack((img, vertices, edges, closed))
     else:
         img = np.dstack((img, vertices))
+    img = np.transpose(img, (2, 0, 1))
     return img
