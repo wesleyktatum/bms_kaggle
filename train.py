@@ -126,6 +126,7 @@ def train(train_loader, model, optimizer, epoch, args):
                 model_forward_start = perf_counter()
                 preds, encoded_inchis, decode_lengths, alphas, sort_ind = model(imgs, encoded_inchis, inchi_lengths)
                 model_forward_end = perf_counter()
+                model_forward_times.append(model_forward_end - model_forward_start)
 
                 postprocess_start = perf_counter()
                 targets = encoded_inchis[:,1:]
@@ -176,6 +177,7 @@ def train(train_loader, model, optimizer, epoch, args):
             write_log_times.append(write_log_end - write_log_start)
 
             start_time = perf_counter()
+            data_load_start = perf_counter()
 
     train_loss = np.mean(losses)
     data_load_time = round(np.mean(data_load_times), 3)
