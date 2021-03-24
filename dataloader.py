@@ -27,14 +27,14 @@ class MoleculeDataset(Dataset):
     def __getitem__(self, i):
         ### grab image
         img_id = self.labels.image_id.values[i]
-        open_img_start = perfcounter()
+        open_img_start = perf_counter()
         img_path = get_path_from_img_id(img_id, self.source_dir)
         img = Image.open(img_path)
-        open_img_end = perfcounter()
+        open_img_end = perf_counter()
         open_img_time = open_img_end - open_img_start
-        convert_img_start = perfcounter()
+        convert_img_start = perf_counter()
         img = img.convert('L')
-        convert_img_end = perfcounter()
+        convert_img_end = perf_counter()
         convert_img_time = convert_img_end - convert_img_start
 
         rotate_img_start = perf_counter()
