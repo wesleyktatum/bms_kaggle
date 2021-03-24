@@ -253,9 +253,9 @@ def get_vertices(img, window_size = 7, window_mask = True, window_list = True):
 
         else:
             vertex_windows = np.where(vertex_map == 1, img, 0)
-            return vertex_windows
+            return vertex_windows, None
     else:
-        return vertex_map
+        return vertex_map, None
 
 
 def morph_around_windows(img, windows, morph_function):
@@ -273,3 +273,27 @@ def morph_around_windows(img, windows, morph_function):
     final_img = np.where(vertex_mask == 1, img, morphed_img)
 
     return final_img
+
+def preprocess(img_path, extensive=False):
+    """
+    Takes in a path to a 2D grayscale image and turns into multi-channel array.
+    Each channel stores a different type of transformation.
+
+    Currently, channels are: [img, vertices]
+    """
+    img = Image.open(img_path)
+    img = img.convert('L')
+    img = np.array(img)
+    img = invert_and_normalize(img)
+    vertices, window_list = get_vertices(img, window_size=5, window_mask=False,
+                                         window_list=True)
+
+    if extensive:
+        prebinarized = binarize(img)
+        edges = edge_enhance(prebinarized)
+        edges = edge_detect(edges)
+        closed = closing(prebinarized)
+        img = np.dstack((img, vertices, edges, closed))
+    else:
+        img = np.dstack((img, vertices))
+    return img

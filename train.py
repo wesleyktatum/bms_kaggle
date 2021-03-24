@@ -45,7 +45,7 @@ def main(args):
         already_wrote = False
     log_file = open(args.log_fn, 'a')
     if not already_wrote:
-        log_file.write('epoch,batch_idx,data_type,loss,run_time\n')
+        log_file.write('epoch,batch_idx,data_type,loss,acc,run_time\n')
     log_file.close()
 
     if args.checkpoint_fn is not None:
@@ -144,12 +144,12 @@ def train(train_loader, model, optimizer, epoch, args):
 
                 backprop_start = perf_counter()
                 loss.backward()
-                # acc = accuracy(preds, targets, 1)
+                acc = accuracy(preds, targets, 1)
                 backprop_end = perf_counter()
                 backprop_times.append(backprop_end - backprop_start)
 
                 avg_losses.append(loss.item())
-                # avg_accs.append(acc)
+                avg_accs.append(acc)
 
             if args.grad_clip is not None:
                 clip_gradient(optimizer, args.grad_clip)
@@ -162,15 +162,16 @@ def train(train_loader, model, optimizer, epoch, args):
             stop_time = perf_counter()
             batch_time = round(stop_time - start_time, 5)
             avg_loss = round(np.mean(avg_losses), 5)
-            # avg_acc = round(np.mean(avg_accs), 2)
+            avg_acc = round(np.mean(avg_accs), 2)
             losses.append(avg_loss)
 
             # Log
             write_log_start = perf_counter()
             log_file = open(args.log_fn, 'a')
-            log_file.write('{},{},{},{},{}\n'.format(epoch,
+            log_file.write('{},{},{},{},{},{}\n'.format(epoch,
                                                         i, 'train',
                                                         avg_loss,
+                                                        avg_acc,
                                                         batch_time))
             log_file.close()
             write_log_end = perf_counter()
@@ -180,15 +181,15 @@ def train(train_loader, model, optimizer, epoch, args):
             data_load_start = perf_counter()
 
     train_loss = np.mean(losses)
-    data_load_time = round(np.mean(data_load_times), 3)
-    chunk_time = round(np.mean(chunk_times), 3)
-    to_cuda_time = round(np.mean(to_cuda_times), 3)
-    model_forward_time = round(np.mean(model_forward_times), 3)
-    postprocess_time = round(np.mean(postprocess_times), 3)
-    calc_loss_time = round(np.mean(calc_loss_times), 3)
-    backprop_time = round(np.mean(backprop_times), 3)
-    optimizer_time = round(np.mean(optimizer_times), 3)
-    write_log_time = round(np.mean(write_log_times), 3)
+    data_load_time = np.mean(data_load_times)
+    chunk_time = np.mean(chunk_times)
+    to_cuda_time = np.mean(to_cuda_times)
+    model_forward_time = np.mean(model_forward_times)
+    postprocess_time = np.mean(postprocess_times)
+    calc_loss_time = np.mean(calc_loss_times)
+    backprop_time = np.mean(backprop_times)
+    optimizer_time = np.mean(optimizer_times)
+    write_log_time = np.mean(write_log_times)
     print('Data Loading - {} s'.format(data_load_time))
     print('Chunking - {} s'.format(chunk_time))
     print('Sending to CUDA - {} s'.format(to_cuda_time))
@@ -228,21 +229,22 @@ def validate(val_loader, model, epoch, args):
                 loss = ce_loss(targets, preds, args.char_weights)
                 loss += args.alpha_c * ((1. - alphas.sum(dim=1))**2).mean()
 
-                # acc = accuracy(preds, targets, 1)
+                acc = accuracy(preds, targets, 1)
                 avg_losses.append(loss.item())
-                # avg_accs.append(acc)
+                avg_accs.append(acc)
 
             stop_time = perf_counter()
             batch_time = round(stop_time - start_time, 5)
             avg_loss = round(np.mean(avg_losses), 5)
-            # avg_acc = round(np.mean(avg_accs), 2)
+            avg_acc = round(np.mean(avg_accs), 2)
             losses.append(avg_loss)
 
             # Log
             log_file = open(args.log_fn, 'a')
-            log_file.write('{},{},{},{},{}\n'.format(epoch,
+            log_file.write('{},{},{},{},{},{}\n'.format(epoch,
                                                         i, 'val',
                                                         avg_loss,
+                                                        avg_acc,
                                                         batch_time))
             log_file.close()
 

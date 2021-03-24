@@ -17,7 +17,7 @@ class MoleculeDataset(Dataset):
     """
     def __init__(self, labels_fn, source_dir, char_dict, max_inchi_len, do_transform=True, rotate=True, p=0.5):
         self.labels = pd.read_csv(labels_fn)
-        self.source_dir = source_dir
+        self.inchis = self.labels.InChI.values
         self.char_dict = char_dict
         self.max_inchi_len = max_inchi_len
         self.do_transform = do_transform
@@ -82,26 +82,3 @@ class MoleculeDataset(Dataset):
 
     def __len__(self):
         return self.labels.shape[0]
-
-    def transform(self, img):
-        """
-        Takes in a 2D grayscale image and turns into multi-channel array. Each channel
-        stores a different type of transformation.
-
-        Currently, channels are: [img, vertices, dilated, eroded,
-                                  enhanced and detected edges]
-        """
-
-        prebinarized = binarize(img)
-
-        edges = edge_enhance(prebinarized)
-        edges = edge_detect(edges)
-
-        vertices, window_list = get_vertices(img, window_size = 7,
-                                             window_mask = True,
-                                             window_list = True)
-
-        closed = closing(prebinarized)
-
-        transformed = np.dstack((img, vertices, closed, edges))
-        return transformed
