@@ -90,56 +90,112 @@ def train(train_loader, model, optimizer, epoch, args):
     model.train()
     start_time = perf_counter()
     losses = []
+    data_load_times = []
+    chunk_times = []
+    to_cuda_times = []
+    model_forward_times = []
+    postprocess_times = []
+    calc_loss_times = []
+    backprop_times = []
+    optimizer_times = []
+    write_log_times = []
+    data_load_start = perf_counter()
 
     for i, (batch_imgs, batch_encoded_inchis, batch_inchi_lengths) in enumerate(train_loader):
-        avg_losses = []
-        avg_accs = []
-        for j in range(args.batch_chunks):
-            imgs = batch_imgs[j*args.chunk_size:(j+1)*args.chunk_size,:,:,:]
-            encoded_inchis = batch_encoded_inchis[j*args.chunk_size:(j+1)*args.chunk_size,:]
-            inchi_lengths = batch_inchi_lengths[j*args.chunk_size:(j+1)*args.chunk_size]
-            imgs = imgs.to(DEVICE)
-            encoded_inchis = encoded_inchis.to(DEVICE)
-            inchi_lengths = inchi_lengths.unsqueeze(1).to(DEVICE)
+        if i > 9:
+            break
+        else:
+            data_load_end = perf_counter()
+            data_load_times.append(data_load_end - data_load_start)
+            avg_losses = []
+            avg_accs = []
+            for j in range(args.batch_chunks):
+                chunk_start = perf_counter()
+                imgs = batch_imgs[j*args.chunk_size:(j+1)*args.chunk_size,:,:,:]
+                encoded_inchis = batch_encoded_inchis[j*args.chunk_size:(j+1)*args.chunk_size,:]
+                inchi_lengths = batch_inchi_lengths[j*args.chunk_size:(j+1)*args.chunk_size]
+                chunk_end = perf_counter()
+                chunk_times.append(chunk_end - chunk_start)
+                to_cuda_start = perf_counter()
+                imgs = imgs.to(DEVICE)
+                encoded_inchis = encoded_inchis.to(DEVICE)
+                inchi_lengths = inchi_lengths.unsqueeze(1).to(DEVICE)
+                to_cuda_end = perf_counter()
+                to_cuda_times.append(to_cuda_end - to_cuda_start)
 
-            preds, encoded_inchis, decode_lengths, alphas, sort_ind = model(imgs, encoded_inchis, inchi_lengths)
+                model_forward_start = perf_counter()
+                preds, encoded_inchis, decode_lengths, alphas, sort_ind = model(imgs, encoded_inchis, inchi_lengths)
+                model_forward_end = perf_counter()
 
-            targets = encoded_inchis[:,1:]
+                postprocess_start = perf_counter()
+                targets = encoded_inchis[:,1:]
 
-            preds = pack_padded_sequence(preds, decode_lengths, batch_first=True).data
-            targets = pack_padded_sequence(targets, decode_lengths, batch_first=True).data
+                preds = pack_padded_sequence(preds, decode_lengths, batch_first=True).data
+                targets = pack_padded_sequence(targets, decode_lengths, batch_first=True).data
+                postprocess_end = perf_counter()
+                postprocess_times.append(postprocess_end - postprocess_start)
 
-            loss = ce_loss(targets, preds, args.char_weights)
-            loss += args.alpha_c * ((1. - alphas.sum(dim=1))**2).mean()
+                calc_loss_start = perf_counter()
+                loss = ce_loss(targets, preds, args.char_weights)
+                loss += args.alpha_c * ((1. - alphas.sum(dim=1))**2).mean()
+                calc_loss_end = perf_counter()
+                calc_loss_times.append(calc_loss_end - calc_loss_start)
 
-            loss.backward()
-            # acc = accuracy(preds, targets, 1)
+                backprop_start = perf_counter()
+                loss.backward()
+                # acc = accuracy(preds, targets, 1)
+                backprop_end = perf_counter()
+                backprop_times.append(backprop_end - backprop_start)
 
-            avg_losses.append(loss.item())
-            # avg_accs.append(acc)
+                avg_losses.append(loss.item())
+                # avg_accs.append(acc)
 
-        if args.grad_clip is not None:
-            clip_gradient(optimizer, args.grad_clip)
+            if args.grad_clip is not None:
+                clip_gradient(optimizer, args.grad_clip)
 
-        optimizer.step()
-        optimizer.zero_grad()
-        stop_time = perf_counter()
-        batch_time = round(stop_time - start_time, 5)
-        avg_loss = round(np.mean(avg_losses), 5)
-        # avg_acc = round(np.mean(avg_accs), 2)
-        losses.append(avg_loss)
+            optimizer_start = perf_counter()
+            optimizer.step()
+            optimizer.zero_grad()
+            optimizer_end = perf_counter()
+            optimizer_times.append(optimizer_end - optimizer_start)
+            stop_time = perf_counter()
+            batch_time = round(stop_time - start_time, 5)
+            avg_loss = round(np.mean(avg_losses), 5)
+            # avg_acc = round(np.mean(avg_accs), 2)
+            losses.append(avg_loss)
 
-        # Log
-        log_file = open(args.log_fn, 'a')
-        log_file.write('{},{},{},{},{}\n'.format(epoch,
-                                                    i, 'train',
-                                                    avg_loss,
-                                                    batch_time))
-        log_file.close()
+            # Log
+            write_log_start = perf_counter()
+            log_file = open(args.log_fn, 'a')
+            log_file.write('{},{},{},{},{}\n'.format(epoch,
+                                                        i, 'train',
+                                                        avg_loss,
+                                                        batch_time))
+            log_file.close()
+            write_log_end = perf_counter()
+            write_log_times.append(write_log_end - write_log_start)
 
-        start_time = perf_counter()
+            start_time = perf_counter()
 
     train_loss = np.mean(losses)
+    data_load_time = round(np.mean(data_load_times), 3)
+    chunk_time = round(np.mean(chunk_times), 3)
+    to_cuda_time = round(np.mean(to_cuda_times), 3)
+    model_forward_time = round(np.mean(model_forward_times), 3)
+    postprocess_time = round(np.mean(postprocess_times), 3)
+    calc_loss_time = round(np.mean(calc_loss_times), 3)
+    backprop_time = round(np.mean(backprop_times), 3)
+    optimizer_time = round(np.mean(optimizer_times), 3)
+    write_log_time = round(np.mean(write_log_times), 3)
+    print('Data Loading - {} s'.format(data_load_time))
+    print('Chunking - {} s'.format(chunk_time))
+    print('Sending to CUDA - {} s'.format(to_cuda_time))
+    print('Model Forward - {} s'.format(model_forward_time))
+    print('Postprocessing - {} s'.format(postprocess_time))
+    print('Calculating Loss - {} s'.format(calc_loss_time))
+    print('Backpropagating - {} s'.format(backprop_time))
+    print('Optimizer Gradient - {} s'.format(optimizer_time))
+    print('Writing Log - {} s'.format(write_log_time))
     return train_loss
 
 def validate(val_loader, model, epoch, args):
