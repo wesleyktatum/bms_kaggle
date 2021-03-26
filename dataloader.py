@@ -17,11 +17,11 @@ class MoleculeDataset(Dataset):
     """
     PyTorch Dataset class to load molecular images and InChIs
     """
-    def __init__(self, labels_fn, source_dir, shard_id, char_dict,
+    def __init__(self, labels, mode, source_dir, shard_id, char_dict,
                  max_inchi_len, rotate=True, p=0.5):
-        labels = pd.read_csv(labels_fn)
+        self.labels = labels
         self.inchis = labels.InChI.values
-        self.mode = labels_fn.split('/')[-1].split('.')[0]
+        self.mode = mode
         self.shard_id = shard_id
         self.sparse_path = os.path.join(source_dir, '{}_shards'.format(self.mode), 'shard{}.npz'.format(shard_id))
         self.sparse_imgs = sparse.load_npz(self.sparse_path)
@@ -33,7 +33,7 @@ class MoleculeDataset(Dataset):
     def __getitem__(self, i):
         ### grab image
         sparse_img = self.sparse_imgs[i,:,:,:]
-        img = sparse_img.todense()
+        img = sparse_img.todense().astype(np.float32)
         img = torch.tensor(img)
         if self.rotate:
             angles = [0, 90, 180, 270]
