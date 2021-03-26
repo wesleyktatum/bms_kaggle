@@ -59,4 +59,4 @@ class MoleculeDataset(Dataset):
         return img, encoded_inchi, inchi_length
 
     def __len__(self):
-        return self.labels.shape[0]
+        return self.sparse_imgs.shape[0]
