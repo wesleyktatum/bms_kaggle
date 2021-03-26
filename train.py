@@ -2,6 +2,8 @@ import os
 os.environ['KMP_DUPLICATE_LIB_OK']='True'
 from time import perf_counter
 import argparse
+import numpy as np
+import pandas as pd
 
 from util import *
 from loss import ce_loss
