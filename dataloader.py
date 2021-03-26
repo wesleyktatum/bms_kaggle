@@ -23,7 +23,7 @@ class MoleculeDataset(Dataset):
         self.inchis = labels.InChI.values
         self.mode = labels_fn.split('/')[-1].split('.')[0]
         self.shard_id = shard_id
-        self.sparse_path = os.path.join(source_dir, '{}_shards'.format(mode), 'shard{}.npz'.format(shard_id))
+        self.sparse_path = os.path.join(source_dir, '{}_shards'.format(self.mode), 'shard{}.npz'.format(shard_id))
         self.sparse_imgs = sparse.load_npz(self.sparse_path)
         self.char_dict = char_dict
         self.max_inchi_len = max_inchi_len
