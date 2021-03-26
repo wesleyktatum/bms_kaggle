@@ -47,7 +47,7 @@ def main(args):
         already_wrote = False
     log_file = open(args.log_fn, 'a')
     if not already_wrote:
-        log_file.write('epoch,batch_idx,data_type,loss,acc,run_time\n')
+        log_file.write('epoch,batch_idx,data_type,loss,run_time\n')
     log_file.close()
 
     if args.checkpoint_fn is not None:
@@ -135,7 +135,7 @@ def train(train_loader, model, optimizer, epoch, args, batch_counter=0):
             data_load_end = perf_counter()
             data_load_times.append(data_load_end - data_load_start)
             avg_losses = []
-            # avg_accs = []
+            batch_loss = 0
             for j in range(args.batch_chunks):
                 chunk_start = perf_counter()
                 imgs = batch_imgs[j*args.chunk_size:(j+1)*args.chunk_size,:,:,:]
@@ -166,20 +166,19 @@ def train(train_loader, model, optimizer, epoch, args, batch_counter=0):
                 calc_loss_start = perf_counter()
                 loss = ce_loss(targets, preds, args.char_weights)
                 loss += args.alpha_c * ((1. - alphas.sum(dim=1))**2).mean()
+                batch_loss += loss
                 calc_loss_end = perf_counter()
                 calc_loss_times.append(calc_loss_end - calc_loss_start)
 
-                backprop_start = perf_counter()
-                loss.backward()
-                # acc = accuracy(preds, targets, 1)
-                backprop_end = perf_counter()
-                backprop_times.append(backprop_end - backprop_start)
-
                 avg_losses.append(loss.item())
-                # avg_accs.append(acc)
 
             if args.grad_clip is not None:
                 clip_gradient(optimizer, args.grad_clip)
+
+            backprop_start = perf_counter()
+            loss.backward()
+            backprop_end = perf_counter()
+            backprop_times.append(backprop_end - backprop_start)
 
             optimizer_start = perf_counter()
             optimizer.step()
@@ -189,7 +188,6 @@ def train(train_loader, model, optimizer, epoch, args, batch_counter=0):
             stop_time = perf_counter()
             batch_time = round(stop_time - start_time, 5)
             avg_loss = round(np.mean(avg_losses), 5)
-            # avg_acc = round(np.mean(avg_accs), 2)
             losses.append(avg_loss)
             batch_counter += 1
 
@@ -224,7 +222,7 @@ def train(train_loader, model, optimizer, epoch, args, batch_counter=0):
     print('Model Forward - {} s'.format(model_forward_time*args.batch_chunks))
     print('Postprocessing - {} s'.format(postprocess_time*args.batch_chunks))
     print('Calculating Loss - {} s'.format(calc_loss_time*args.batch_chunks))
-    print('Backpropagating - {} s'.format(backprop_time*args.batch_chunks))
+    print('Backpropagating - {} s'.format(backprop_time))
     print('Optimizer Gradient - {} s'.format(optimizer_time))
     print('Writing Log - {} s'.format(write_log_time))
     return train_loss, batch_counter
