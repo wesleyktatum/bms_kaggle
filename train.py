@@ -135,7 +135,7 @@ def train(train_loader, model, optimizer, epoch, args, batch_counter=0):
             data_load_end = perf_counter()
             data_load_times.append(data_load_end - data_load_start)
             avg_losses = []
-            avg_accs = []
+            # avg_accs = []
             for j in range(args.batch_chunks):
                 chunk_start = perf_counter()
                 imgs = batch_imgs[j*args.chunk_size:(j+1)*args.chunk_size,:,:,:]
@@ -171,12 +171,12 @@ def train(train_loader, model, optimizer, epoch, args, batch_counter=0):
 
                 backprop_start = perf_counter()
                 loss.backward()
-                acc = accuracy(preds, targets, 1)
+                # acc = accuracy(preds, targets, 1)
                 backprop_end = perf_counter()
                 backprop_times.append(backprop_end - backprop_start)
 
                 avg_losses.append(loss.item())
-                avg_accs.append(acc)
+                # avg_accs.append(acc)
 
             if args.grad_clip is not None:
                 clip_gradient(optimizer, args.grad_clip)
@@ -189,18 +189,17 @@ def train(train_loader, model, optimizer, epoch, args, batch_counter=0):
             stop_time = perf_counter()
             batch_time = round(stop_time - start_time, 5)
             avg_loss = round(np.mean(avg_losses), 5)
-            avg_acc = round(np.mean(avg_accs), 2)
+            # avg_acc = round(np.mean(avg_accs), 2)
             losses.append(avg_loss)
             batch_counter += 1
 
             # Log
             write_log_start = perf_counter()
             log_file = open(args.log_fn, 'a')
-            log_file.write('{},{},{},{},{},{}\n'.format(epoch,
+            log_file.write('{},{},{},{},{}\n'.format(epoch,
                                                         batch_counter,
                                                         'train',
                                                         avg_loss,
-                                                        avg_acc,
                                                         batch_time))
             log_file.close()
             write_log_end = perf_counter()
