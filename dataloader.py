@@ -17,7 +17,7 @@ class MoleculeDataset(Dataset):
     """
     PyTorch Dataset class to load molecular images and InChIs
     """
-    def __init__(self, labels, mode, source_dir, shard_id, char_dict,
+    def __init__(self, labels, mode, shard_id, source_dir, char_dict,
                  max_inchi_len, rotate=True, p=0.5):
         self.labels = labels
         self.inchis = labels.InChI.values
