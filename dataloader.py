@@ -5,6 +5,8 @@ import numpy as np
 import pandas as pd
 from PIL import Image
 
+from sparse import sparse
+
 import torch
 from torch.utils.data import Dataset
 import torchvision.transforms.functional as TF
@@ -15,70 +17,46 @@ class MoleculeDataset(Dataset):
     """
     PyTorch Dataset class to load molecular images and InChIs
     """
-    def __init__(self, labels_fn, source_dir, char_dict, max_inchi_len, do_transform=True, rotate=True, p=0.5):
-        self.labels = pd.read_csv(labels_fn)
-        self.inchis = self.labels.InChI.values
+    def __init__(self, labels_fn, source_dir, shard_id, char_dict,
+                 max_inchi_len, rotate=True, p=0.5):
+        labels = pd.read_csv(labels_fn)
+        self.inchis = labels.InChI.values
+        self.mode = labels_fn.split('/')[-1].split('.')[0]
+        self.shard_id = shard_id
+        self.sparse_path = os.path.join(source_dir, '{}_shards'.format(mode), 'shard{}.npz'.format(shard_id))
+        self.sparse_imgs = sparse.load_npz(self.sparse_path)
         self.char_dict = char_dict
         self.max_inchi_len = max_inchi_len
-        self.do_transform = do_transform
         self.rotate = rotate
         self.p = p
 
     def __getitem__(self, i):
         ### grab image
-        img_id = self.labels.image_id.values[i]
-        open_img_start = perf_counter()
-        img_path = get_path_from_img_id(img_id, self.source_dir)
-        img = Image.open(img_path)
-        open_img_end = perf_counter()
-        open_img_time = open_img_end - open_img_start
-        convert_img_start = perf_counter()
-        img = img.convert('L')
-        convert_img_end = perf_counter()
-        convert_img_time = convert_img_end - convert_img_start
-
-        rotate_img_start = perf_counter()
+        sparse_img = self.sparse_imgs[i,:,:,:]
+        img = sparse_img.todense()
+        img = torch.tensor(img)
         if self.rotate:
             angles = [0, 90, 180, 270]
             angle = np.random.choice(angles, size=1, p=[1 - self.p, self.p / 3, self.p / 3, self.p / 3])
-            img = TF.rotate(img, angle, fill=(0,))
-        rotate_img_end = perf_counter()
-        rotate_img_time = rotate_img_end - rotate_img_start
+            if angle == 0:
+                pass
+            elif angle == 90:
+                img = torch.rot90(img, 1, [1,2])
+            elif angle == 180:
+                img = torch.rot90(img, 1, [1,2])
+                img = torch.rot90(img, 1, [1,2])
+            elif angle == 270:
+                img = torch.rot90(img, -1, [1,2])
 
-        invert_img_start = perf_counter()
-        img = np.array(img)
-        img = invert_and_normalize(img)
-        invert_img_end = perf_counter()
-        invert_img_time = invert_img_end - invert_img_start
-
-        transform_img_start = perf_counter()
-        if self.do_transform:
-            img = self.transform(img)
-        transform_img_end = perf_counter()
-        transform_img_time = transform_img_end - transform_img_start
-        img = torch.tensor(img)
-        img = img.permute(2, 0, 1).float()
-
-        encode_inchi_start = perf_counter()
         ### grab inchi
-        inchi = self.labels.InChI.values[i]
+        inchi_idx = i + (200000*self.shard_id)
+        inchi = self.inchis[inchi_idx]
         tokenized_inchi = tokenize_inchi(inchi)
         tokenized_inchi = ['<sos>'] + tokenized_inchi
         tokenized_inchi += ['<eos>']
         inchi_length = torch.tensor(len(tokenized_inchi))
         encoded_inchi = torch.tensor(encode_inchi(tokenized_inchi, self.max_inchi_len, self.char_dict))
-        encode_inchi_end = perf_counter()
-        encode_inchi_time = encode_inchi_end - encode_inchi_start
-        log_file = open('logs/log_dataloader_times.txt', 'a')
-        log_file.write('{},{},{},{},{},{},{}\n'.format(i, open_img_time,
-                                                       convert_img_time,
-                                                       rotate_img_time,
-                                                       invert_img_time,
-                                                       transform_img_time,
-                                                       encode_inchi_time))
-        log_file.close()
         return img, encoded_inchi, inchi_length
-
 
     def __len__(self):
         return self.labels.shape[0]
