@@ -17,16 +17,13 @@ class MoleculeDataset(Dataset):
     """
     PyTorch Dataset class to load molecular images and InChIs
     """
-    def __init__(self, labels, mode, shard_id, source_dir, char_dict,
-                 max_inchi_len, rotate=True, p=0.5):
-        self.labels = labels
-        self.inchis = labels.InChI.values
+    def __init__(self, mode, shard_id, source_dir, rotate=True, p=0.5):
         self.mode = mode
         self.shard_id = shard_id
         self.sparse_path = os.path.join(source_dir, '{}_shards'.format(self.mode), 'shard{}.npz'.format(shard_id))
         self.sparse_imgs = sparse.load_npz(self.sparse_path)
-        self.char_dict = char_dict
-        self.max_inchi_len = max_inchi_len
+        self.inchi_path = os.path.join(source_dir, '{}_shards'.format(self.mode), 'encoded_inchis.npy')
+        self.encoded_inchis = np.load(self.inchi_path)
         self.rotate = rotate
         self.p = p
 
@@ -50,12 +47,9 @@ class MoleculeDataset(Dataset):
 
         ### grab inchi
         inchi_idx = i + (200000*self.shard_id)
-        inchi = self.inchis[inchi_idx]
-        tokenized_inchi = tokenize_inchi(inchi)
-        tokenized_inchi = ['<sos>'] + tokenized_inchi
-        tokenized_inchi += ['<eos>']
-        inchi_length = torch.tensor(len(tokenized_inchi))
-        encoded_inchi = torch.tensor(encode_inchi(tokenized_inchi, self.max_inchi_len, self.char_dict))
+        inchi_data = torch.tensor(self.encoded_inchis[inchi_idx]).int()
+        encoded_inchi = inchi_data[:,:-1]
+        inchi_length = inchi_data[:,-1]
         return img, encoded_inchi, inchi_length
 
     def __len__(self):

@@ -61,8 +61,6 @@ def main(args):
     model = model.to(DEVICE)
     optimizer = torch.optim.Adam(params=model.parameters(), lr=args.lr)
 
-    train_labels = pd.read_csv('{}/train.csv'.format(args.data_dir))
-    val_labels = pd.read_csv('{}/val.csv'.format(args.data_dir))
     n_train_shards = len(os.listdir(os.path.join(args.imgs_dir, 'train_shards')))
     n_val_shards = len(os.listdir(os.path.join(args.imgs_dir, 'val_shards')))
 
@@ -73,8 +71,7 @@ def main(args):
         train_losses = []
         batch_counter = 0
         for shard_id in train_shard_ids:
-            mol_train = MoleculeDataset(train_labels, mode, shard_id, args.imgs_dir,
-                                        char_dict, args.max_inchi_length)
+            mol_train = MoleculeDataset(mode, shard_id, args.imgs_dir)
             train_loader = torch.utils.data.DataLoader(mol_train, batch_size=args.batch_size,
                                                        shuffle=True, num_workers=0,
                                                        pin_memory=False, drop_last=True)
@@ -90,8 +87,7 @@ def main(args):
         # val_losses = []
         # batch_counter = 0
         # for shard_id in val_shard_ids:
-        #     val_train = MoleculeDataset(val_labels, mode, shard_id, args.imgs_dir,
-        #                                 char_dict, args.max_inchi_length)
+        #     val_train = MoleculeDataset(mode, shard_id, args.imgs_dir)
         #     val_loader = torch.utils.data.DataLoader(val_train, batch_size=args.batch_size,
         #                                              shuffle=True, num_workers=0,
         #                                              pin_memory=False, drop_last=True)
@@ -193,10 +189,10 @@ def train(train_loader, model, optimizer, epoch, args, batch_counter=0):
             write_log_start = perf_counter()
             log_file = open(args.log_fn, 'a')
             log_file.write('{},{},{},{},{}\n'.format(epoch,
-                                                        batch_counter,
-                                                        'train',
-                                                        avg_loss,
-                                                        batch_time))
+                                                     batch_counter,
+                                                     'train',
+                                                     avg_loss,
+                                                     batch_time))
             log_file.close()
             write_log_end = perf_counter()
             write_log_times.append(write_log_end - write_log_start)
@@ -234,7 +230,6 @@ def validate(val_loader, model, epoch, args, batch_counter=0):
     with torch.no_grad():
         for i, (batch_imgs, batch_encoded_inchis, batch_inchi_lengths) in enumerate(val_loader):
             avg_losses = []
-            avg_accs = []
             for j in range(args.batch_chunks):
                 imgs = batch_imgs[j*args.chunk_size:(j+1)*args.chunk_size,:,:,:]
                 encoded_inchis = batch_encoded_inchis[j*args.chunk_size:(j+1)*args.chunk_size,:]
@@ -253,24 +248,21 @@ def validate(val_loader, model, epoch, args, batch_counter=0):
                 loss = ce_loss(targets, preds, args.char_weights)
                 loss += args.alpha_c * ((1. - alphas.sum(dim=1))**2).mean()
 
-                acc = accuracy(preds, targets, 1)
                 avg_losses.append(loss.item())
-                avg_accs.append(acc)
 
             stop_time = perf_counter()
             batch_time = round(stop_time - start_time, 5)
             avg_loss = round(np.mean(avg_losses), 5)
-            avg_acc = round(np.mean(avg_accs), 2)
             losses.append(avg_loss)
             batch_counter += 1
 
             # Log
             log_file = open(args.log_fn, 'a')
-            log_file.write('{},{},{},{},{},{}\n'.format(epoch,
-                                                        i, 'val',
-                                                        avg_loss,
-                                                        avg_acc,
-                                                        batch_time))
+            log_file.write('{},{},{},{},{}\n'.format(epoch,
+                                                     batch_counter,
+                                                     'val',
+                                                     avg_loss,
+                                                     batch_time))
             log_file.close()
 
             start_time = perf_counter()
