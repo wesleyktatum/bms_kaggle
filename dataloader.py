@@ -48,8 +48,8 @@ class MoleculeDataset(Dataset):
         ### grab inchi
         inchi_idx = i + (200000*self.shard_id)
         inchi_data = torch.tensor(self.encoded_inchis[inchi_idx]).int()
-        encoded_inchi = inchi_data[:,:-1]
-        inchi_length = inchi_data[:,-1]
+        encoded_inchi = inchi_data[:-1]
+        inchi_length = inchi_data[-1]
         return img, encoded_inchi, inchi_length
 
     def __len__(self):
