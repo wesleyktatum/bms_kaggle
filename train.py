@@ -61,8 +61,8 @@ def main(args):
     model = model.to(DEVICE)
     optimizer = torch.optim.Adam(params=model.parameters(), lr=args.lr)
 
-    n_train_shards = len(os.listdir(os.path.join(args.imgs_dir, 'train_shards')))
-    n_val_shards = len(os.listdir(os.path.join(args.imgs_dir, 'val_shards')))
+    n_train_shards = len(os.listdir(os.path.join(args.imgs_dir, 'train_shards'))) - 1
+    n_val_shards = len(os.listdir(os.path.join(args.imgs_dir, 'val_shards'))) - 1
 
     for epoch in range(start_epoch, start_epoch+args.n_epochs):
         mode = 'train'
