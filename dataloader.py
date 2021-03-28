@@ -48,7 +48,9 @@ class MoleculeDataset(Dataset):
         # cast_to_dense = stop - start
         img = torch.tensor(img)
         if self.img_size != 256:
-            img = F.interpolate(img, size=self.img_size)
+            img = img.unsqueeze(0)
+            img = F.interpolate(img, size=(self.img_size, self.img_size))
+            img = img.squeeze(0)
         # start = perf_counter()
         if self.rotate:
             angles = [0, 90, 180, 270]
