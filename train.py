@@ -295,8 +295,7 @@ if __name__ == '__main__':
     parser.add_argument('--n_epochs', type=int, default=5)
     parser.add_argument('--grad_clip', type=float, default=5.)
     parser.add_argument('--alpha_c', type=float, default=1.)
-    parser.add_argument('--prerotated', type=bool, default=False,
-                        action='store_true')
+    parser.add_argument('--prerotated', default=False, action='store_true')
 
     args = parser.parse_args()
     main(args)
