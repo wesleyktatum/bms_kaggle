@@ -208,7 +208,7 @@ class AxialBlockReducedPosEmbeddings(nn.Module):
 
     def __init__(self, inplanes, planes, stride=1, downsample=None, groups=1,
                  base_width=64, dilation=1, norm_layer=None, kernel_size=64):
-        super(AxialBlock, self).__init__()
+        super(AxialBlockReducedPosEmbeddings, self).__init__()
         if norm_layer is None:
             norm_layer = nn.BatchNorm2d
         width = int(planes * (base_width / 64.))
