@@ -209,7 +209,7 @@ class AxialAttentionReducedPosEmbeddings(nn.Module):
         sv = sv.contiguous().view(N*W, self.out_planes, H)
         print('-- Reshaping Output --')
         print(sv.shape)
-        output = self.bn_output(sv)view(N, W, self.out_planes, H)
+        output = self.bn_output(sv).view(N, W, self.out_planes, H)
         print('-- Reshaping BatchNorm Output --')
         print(output.shape)
 
