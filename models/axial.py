@@ -186,7 +186,7 @@ class AxialAttentionReducedPosEmbeddings(nn.Module):
         stacked_similarity = torch.cat([qk, qr], dim=1)
         print('-- Stacking Query Operations --')
         print(stacked_similarity.shape)
-        stacked_similarity = self.bn_similarity(stacked_similarity).view(N * W, 3, self.groups, H, H).sum(dim=1)
+        stacked_similarity = self.bn_similarity(stacked_similarity).view(N * W, 2, self.groups, H, H).sum(dim=1)
         print('-- BatchNorm Query Operations --')
         print(stacked_similarity.shape)
         #stacked_similarity = self.bn_qr(qr) + self.bn_kr(kr) + self.bn_qk(qk)
