@@ -206,10 +206,10 @@ class AxialAttentionReducedPosEmbeddings(nn.Module):
         sv = torch.einsum('bgij,bgcj->bgci', similarity, v)
         print('-- Query Product dot Values --')
         print(sv.shape)
-        sv = sv.view(N*W, self.out_planes, H)
+        sv = sv.contiguous().view(N*W, self.out_planes, H)
         print('-- Reshaping Output --')
         print(sv.shape)
-        output = self.bn_output(sv).view(N, W, self.out_planes, H)
+        output = self.bn_output(sv)view(N, W, self.out_planes, H)
         print('-- Reshaping BatchNorm Output --')
         print(output.shape)
 
