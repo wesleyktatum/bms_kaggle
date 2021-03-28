@@ -8,6 +8,7 @@ from PIL import Image
 from sparse import sparse
 
 import torch
+import torch.nn.functional as F
 from torch.utils.data import Dataset
 import torchvision.transforms.functional as TF
 
@@ -17,9 +18,10 @@ class MoleculeDataset(Dataset):
     """
     PyTorch Dataset class to load molecular images and InChIs
     """
-    def __init__(self, mode, shard_id, source_dir, prerotated=False, rotate=True, p=0.5):
+    def __init__(self, mode, shard_id, source_dir, img_size, prerotated=False, rotate=True, p=0.5):
         self.mode = mode
         self.shard_id = shard_id
+        self.img_size = img_size
         self.prerotated = prerotated
         if self.prerotated:
             self.rotate = False
@@ -45,6 +47,8 @@ class MoleculeDataset(Dataset):
         # stop = perf_counter()
         # cast_to_dense = stop - start
         img = torch.tensor(img)
+        if self.img_size != 256:
+            img = F.interpolate(img, size=self.img_size)
         # start = perf_counter()
         if self.rotate:
             angles = [0, 90, 180, 270]

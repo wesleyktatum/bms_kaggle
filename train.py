@@ -53,7 +53,10 @@ def main(args):
     if args.checkpoint_fn is not None:
         pass
     else:
-        encoder = axial18s()
+        if args.encoder == 'axials':
+            encoder = axial18s()
+        elif args.encoder == 'axialsrpe':
+            encoder = axial18srpe()
         decoder = biLSTM512(vocab_size=vocab_size, device=DEVICE)
         model = CaptionModel(encoder, decoder)
         start_epoch = 0
@@ -71,7 +74,8 @@ def main(args):
         train_losses = []
         batch_counter = 0
         for shard_id in train_shard_ids:
-            mol_train = MoleculeDataset(mode, shard_id, args.imgs_dir, args.prerotated)
+            mol_train = MoleculeDataset(mode, shard_id, args.imgs_dir, args.img_size,
+                                        args.prerotated)
             train_loader = torch.utils.data.DataLoader(mol_train, batch_size=args.batch_size,
                                                        shuffle=True, num_workers=0,
                                                        pin_memory=False, drop_last=True)
@@ -87,7 +91,8 @@ def main(args):
         # val_losses = []
         # batch_counter = 0
         # for shard_id in val_shard_ids:
-        #     val_train = MoleculeDataset(mode, shard_id, args.imgs_dir, args.prerotated)
+        #     val_train = MoleculeDataset(mode, shard_id, args.imgs_dir, args.img_size,
+        #                                 args.prerotated)
         #     val_loader = torch.utils.data.DataLoader(val_train, batch_size=args.batch_size,
         #                                              shuffle=True, num_workers=0,
         #                                              pin_memory=False, drop_last=True)
@@ -292,6 +297,8 @@ if __name__ == '__main__':
     parser.add_argument('--checkpoint_fn', type=str, default=None)
     parser.add_argument('--model_name', type=str, default=None)
     parser.add_argument('--max_inchi_length', type=int, default=350)
+    parser.add_argument('--img_size', type=int, choices=[64, 128, 256],
+                        default=256)
     parser.add_argument('--batch_size', type=int, default=256)
     parser.add_argument('--batch_chunks', type=int, default=16)
     parser.add_argument('--lr', type=float, default=1e-4)
@@ -299,6 +306,8 @@ if __name__ == '__main__':
     parser.add_argument('--grad_clip', type=float, default=5.)
     parser.add_argument('--alpha_c', type=float, default=1.)
     parser.add_argument('--prerotated', default=False, action='store_true')
+    parser.add_argument('--encoder', choices=['resnet', 'axials', 'axialsrpe'],
+                        default='axialsrpe')
 
     args = parser.parse_args()
     main(args)
