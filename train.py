@@ -21,8 +21,8 @@ from torch.nn.utils.rnn import pack_padded_sequence
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 def main(args):
-    train_dir = os.path.join(args.imgs_dir, args.train_dir)
-    test_dir = os.path.join(args.imgs_dir, args.test_dir)
+    train_dir = os.path.join(args.imgs_dir, 'train_shards')
+    val_dir = os.path.join(args.imgs_dir, 'val_shards')
     with open('{}/char_dict.json'.format(args.data_dir), 'r') as f:
         char_dict = json.load(f)
     with open('{}/ord_dict.json'.format(args.data_dir), 'r') as f:
@@ -61,8 +61,8 @@ def main(args):
     model = model.to(DEVICE)
     optimizer = torch.optim.Adam(params=model.parameters(), lr=args.lr)
 
-    n_train_shards = len(os.listdir(os.path.join(args.imgs_dir, 'train_shards'))) - 1
-    n_val_shards = len(os.listdir(os.path.join(args.imgs_dir, 'val_shards'))) - 1
+    n_train_shards = get_n_shards(train_dir)
+    n_val_shards = get_n_shards(val_dir)
 
     for epoch in range(start_epoch, start_epoch+args.n_epochs):
         mode = 'train'
@@ -71,7 +71,7 @@ def main(args):
         train_losses = []
         batch_counter = 0
         for shard_id in train_shard_ids:
-            mol_train = MoleculeDataset(mode, shard_id, args.imgs_dir)
+            mol_train = MoleculeDataset(mode, shard_id, args.imgs_dir, args.prerotated)
             train_loader = torch.utils.data.DataLoader(mol_train, batch_size=args.batch_size,
                                                        shuffle=True, num_workers=0,
                                                        pin_memory=False, drop_last=True)
@@ -87,7 +87,7 @@ def main(args):
         # val_losses = []
         # batch_counter = 0
         # for shard_id in val_shard_ids:
-        #     val_train = MoleculeDataset(mode, shard_id, args.imgs_dir)
+        #     val_train = MoleculeDataset(mode, shard_id, args.imgs_dir, args.prerotated)
         #     val_loader = torch.utils.data.DataLoader(val_train, batch_size=args.batch_size,
         #                                              shuffle=True, num_workers=0,
         #                                              pin_memory=False, drop_last=True)
@@ -283,8 +283,6 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--imgs_dir', type=str, default='/gscratch/pfaendtner/orion/mol_translation/data')
     parser.add_argument('--data_dir', type=str, default='data')
-    parser.add_argument('--train_dir', type=str, default='train_resize')
-    parser.add_argument('--test_dir', type=str, default='test_resize')
     parser.add_argument('--log_dir', type=str, default='logs')
     parser.add_argument('--save_dir', type=str, default='checkpoints')
     parser.add_argument('--save_freq', type=int, default=1)
@@ -297,6 +295,8 @@ if __name__ == '__main__':
     parser.add_argument('--n_epochs', type=int, default=5)
     parser.add_argument('--grad_clip', type=float, default=5.)
     parser.add_argument('--alpha_c', type=float, default=1.)
+    parser.add_argument('--prerotated', type=bool, default=False,
+                        action='store_true')
 
     args = parser.parse_args()
     main(args)

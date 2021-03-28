@@ -12,6 +12,17 @@ def get_path_from_img_id(img_id, DIR):
     img_path = os.path.join(DIR, img_id[0], img_id[1], img_id[2], '{}.png'.format(img_id))
     return img_path
 
+def get_n_shards(dir):
+    pattern = "[0-9]"
+    regezz = re.compile(pattern)
+    shard_ids = []
+    for fn in os.listdir(dir):
+        nums = [num for num in regezz.findall(fn)]
+        if len(nums) > 0:
+            shard_ids.append(int(nums[0]))
+    n_shards = max(shard_ids) + 1
+    return n_shards
+
 def calc_data_mean_std(img_ids, DIR):
     channel_1_means = []
     channel_2_means = []

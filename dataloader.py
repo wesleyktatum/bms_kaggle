@@ -17,28 +17,35 @@ class MoleculeDataset(Dataset):
     """
     PyTorch Dataset class to load molecular images and InChIs
     """
-    def __init__(self, mode, shard_id, source_dir, rotate=True, p=0.5):
+    def __init__(self, mode, shard_id, source_dir, prerotated=True, rotate=True, p=0.5):
         self.mode = mode
         self.shard_id = shard_id
-        self.sparse_path = os.path.join(source_dir, '{}_shards'.format(self.mode), 'shard{}.npz'.format(shard_id))
+        self.prerotated = prerotated
+        if self.prerotated:
+            self.rotate = False
+        else:
+            self.rotate = rotate
+        self.p = p
+        if self.prerotated:
+            self.sparse_path = os.path.join(source_dir, '{}_shards/prerotated'.format(self.mode), 'shard{}.npz'.format(shard_id))
+        else:
+            self.sparse_path = os.path.join(source_dir, '{}_shards'.format(self.mode), 'shard{}.npz'.format(shard_id))
         self.sparse_imgs = sparse.load_npz(self.sparse_path)
         self.inchi_path = os.path.join(source_dir, '{}_shards'.format(self.mode), 'encoded_inchis.npy')
         self.encoded_inchis = np.load(self.inchi_path)
-        self.rotate = rotate
-        self.p = p
 
     def __getitem__(self, i):
         ### grab image
-        start = perf_counter()
+        # start = perf_counter()
         sparse_img = self.sparse_imgs[i,:,:,:]
-        stop = perf_counter()
-        grab_sparse_img = stop - start
-        start = perf_counter()
+        # stop = perf_counter()
+        # grab_sparse_img = stop - start
+        # start = perf_counter()
         img = sparse_img.todense().astype(np.float32)
-        stop = perf_counter()
-        cast_to_dense = stop - start
+        # stop = perf_counter()
+        # cast_to_dense = stop - start
         img = torch.tensor(img)
-        start = perf_counter()
+        # start = perf_counter()
         if self.rotate:
             angles = [0, 90, 180, 270]
             angle = np.random.choice(angles, size=1, p=[1 - self.p, self.p / 3, self.p / 3, self.p / 3])
@@ -51,20 +58,20 @@ class MoleculeDataset(Dataset):
                 img = torch.rot90(img, 1, [1,2])
             elif angle == 270:
                 img = torch.rot90(img, -1, [1,2])
-        stop = perf_counter()
-        rotate_img = stop - start
+        # stop = perf_counter()
+        # rotate_img = stop - start
 
         ### grab inchi
-        start = perf_counter()
+        # start = perf_counter()
         inchi_idx = i + (200000*self.shard_id)
         inchi_data = torch.tensor(self.encoded_inchis[inchi_idx]).long()
         encoded_inchi = inchi_data[:-1]
         inchi_length = inchi_data[-1]
-        stop = perf_counter()
-        grab_inchi = stop - start
-        log_file = open('logs/log_dataloader_times.txt', 'a')
-        log_file.write('{},{},{},{}\n'.format(grab_sparse_img, cast_to_dense, rotate_img, grab_inchi))
-        log_file.close()
+        # stop = perf_counter()
+        # grab_inchi = stop - start
+        # log_file = open('logs/log_dataloader_times.txt', 'a')
+        # log_file.write('{},{},{},{}\n'.format(grab_sparse_img, cast_to_dense, rotate_img, grab_inchi))
+        # log_file.close()
         return img, encoded_inchi, inchi_length
 
     def __len__(self):
