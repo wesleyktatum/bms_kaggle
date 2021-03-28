@@ -103,7 +103,7 @@ class AxialAttention(nn.Module):
         stacked_output = stacked_output.view(N*W, self.out_planes*2, H)
         print('-- Reshaping Stacked Output --')
         print(stacked_output.shape)
-        output = self.bn_output(stacked_output).view(N, W, self.out_planes, 2, H).sum(dim=-2)
+        output = self.bn_output(stacked_output)
         print('-- BatchNorm Output --')
         print(output.shape)
         output = output.view(N, W, self.out_planes, 2, H)
