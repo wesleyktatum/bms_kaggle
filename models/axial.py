@@ -142,7 +142,7 @@ class AxialAttentionReducedPosEmbeddings(nn.Module):
         #self.bn_qk = nn.BatchNorm2d(groups)
         #self.bn_qr = nn.BatchNorm2d(groups)
         #self.bn_kr = nn.BatchNorm2d(groups)
-        self.bn_output = nn.BatchNorm1d(out_planes * 2)
+        self.bn_output = nn.BatchNorm1d(out_planes)
 
         # Position embedding
         self.relative = nn.Parameter(torch.randn(self.group_planes // 2, kernel_size * 2 - 1), requires_grad=True)
@@ -197,7 +197,7 @@ class AxialAttentionReducedPosEmbeddings(nn.Module):
         sv = torch.einsum('bgij,bgcj->bgci', similarity, v)
         print('-- Query Product dot Values --')
         print(sv.shape)
-        output = self.bn_output(sv).view(N, W, self.out_planes, 2, H).sum(dim=-2)
+        output = self.bn_output(sv.view(N*W, self.out_planes, H)).view(N, W, self.out_planes, H)
 
         if self.width:
             output = output.permute(0, 2, 1, 3)
