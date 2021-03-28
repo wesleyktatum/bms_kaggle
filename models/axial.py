@@ -58,7 +58,9 @@ class AxialAttention(nn.Module):
 
         # Calculate position embedding
         all_embeddings = torch.index_select(self.relative, 1, self.flatten_index).view(self.group_planes * 2, self.kernel_size, self.kernel_size)
+        print(all_embeddings.shape)
         q_embedding, k_embedding, v_embedding = torch.split(all_embeddings, [self.group_planes // 2, self.group_planes // 2, self.group_planes], dim=0)
+        print(q_embedding.shape, k_embedding.shape, v_embedding.shape)
         qr = torch.einsum('bgci,cij->bgij', q, q_embedding)
         kr = torch.einsum('bgci,cij->bgij', k, k_embedding).transpose(2, 3)
         qk = torch.einsum('bgci, bgcj->bgij', q, k)
@@ -114,7 +116,9 @@ class AxialBlock(nn.Module):
         out = self.bn1(out)
         out = self.relu(out)
 
+        print('-- Height Block --')
         out = self.hight_block(out)
+        print('-- Width Block --')
         out = self.width_block(out)
         out = self.relu(out)
 
@@ -181,7 +185,7 @@ class AxialAttentionNet(nn.Module):
                 if isinstance(m, AxialBlock):
                     nn.init.constant_(m.bn2.weight, 0)
 
-    def _make_layer(self, block, planes, blocks, kernel_size=56, stride=1, dilate=False):
+    def _make_layer(self, block, planes, blocks, kernel_size=64, stride=1, dilate=False):
         norm_layer = self._norm_layer
         downsample = None
         previous_dilation = self.dilation
