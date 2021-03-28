@@ -179,7 +179,7 @@ def train(train_loader, model, optimizer, epoch, args, batch_counter=0):
             optimizer.zero_grad()
             # optimizer_end = perf_counter()
             # optimizer_times.append(optimizer_end - optimizer_start)
-            # stop_time = perf_counter()
+            stop_time = perf_counter()
             batch_time = round(stop_time - start_time, 5)
             avg_loss = round(np.mean(avg_losses), 5)
             losses.append(avg_loss)
@@ -197,7 +197,7 @@ def train(train_loader, model, optimizer, epoch, args, batch_counter=0):
             # write_log_end = perf_counter()
             # write_log_times.append(write_log_end - write_log_start)
             #
-            # start_time = perf_counter()
+            start_time = perf_counter()
             # data_load_start = perf_counter()
 
     train_loss = np.mean(losses)
