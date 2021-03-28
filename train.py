@@ -112,7 +112,7 @@ def train(train_loader, model, optimizer, epoch, args, batch_counter=0):
 
     model.train()
     start_time = perf_counter()
-    # losses = []
+    losses = []
     # data_load_times = []
     # chunk_times = []
     # to_cuda_times = []
