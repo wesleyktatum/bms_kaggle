@@ -135,7 +135,7 @@ class AxialAttentionReducedPosEmbeddings(nn.Module):
         q, k, v = torch.split(qkv.reshape(N * W, self.groups, self.group_planes * 2, H), [self.group_planes // 2, self.group_planes // 2, self.group_planes], dim=2)
 
         # Calculate position embedding
-        q_embedding = torch.index_select(self.relative, 1, self.flatten_index).view(self.group_planes * 2, self.kernel_size, self.kernel_size)
+        q_embedding = torch.index_select(self.relative, 1, self.flatten_index).view(self.group_planes // 2, self.kernel_size, self.kernel_size)
         qr = torch.einsum('bgci,cij->bgij', q, q_embedding)
         qk = torch.einsum('bgci, bgcj->bgij', q, k)
         stacked_similarity = torch.cat([qk, qr], dim=1)
