@@ -9,7 +9,7 @@ from util import *
 from loss import ce_loss
 from dataloader import MoleculeDataset
 from models.sasa import ResNet26, ResNet38, ResNet50
-from models.axial import axial18s, axial26s, axial50s, axial50m, axial50l
+from models.axial import axial18s, axial18srpe, axial26s, axial50s, axial50m, axial50l
 from models.bilstm import biLSTM512
 from models.caption import CaptionModel
 
