@@ -125,6 +125,12 @@ def train(train_loader, model, optimizer, epoch, args, batch_counter=0):
     data_load_start = perf_counter()
 
     for i, (batch_imgs, batch_encoded_inchis, batch_inchi_lengths) in enumerate(train_loader):
+        to_cuda_start = perf_counter()
+        batch_imgs = batch_imgs.to(DEVICE)
+        batch_encoded_inchis = batch_encoded_inchis.to(DEVICE)
+        batch_inchi_lengths = batch_inchi_lengths.unsqueeze(1).to(DEVICE)
+        to_cuda_end = perf_counter()
+        to_cuda_times.append(to_cuda_end - to_cuda_start)
         if i > 9:
             break
         else:
@@ -135,15 +141,9 @@ def train(train_loader, model, optimizer, epoch, args, batch_counter=0):
                 chunk_start = perf_counter()
                 imgs = batch_imgs[j*args.chunk_size:(j+1)*args.chunk_size,:,:,:]
                 encoded_inchis = batch_encoded_inchis[j*args.chunk_size:(j+1)*args.chunk_size,:]
-                inchi_lengths = batch_inchi_lengths[j*args.chunk_size:(j+1)*args.chunk_size]
+                inchi_lengths = batch_inchi_lengths[j*args.chunk_size:(j+1)*args.chunk_size,:]
                 chunk_end = perf_counter()
                 chunk_times.append(chunk_end - chunk_start)
-                to_cuda_start = perf_counter()
-                imgs = imgs.to(DEVICE)
-                encoded_inchis = encoded_inchis.to(DEVICE)
-                inchi_lengths = inchi_lengths.unsqueeze(1).to(DEVICE)
-                to_cuda_end = perf_counter()
-                to_cuda_times.append(to_cuda_end - to_cuda_start)
 
                 model_forward_start = perf_counter()
                 preds, encoded_inchis, decode_lengths, alphas, sort_ind = model(imgs, encoded_inchis, inchi_lengths)
@@ -212,7 +212,7 @@ def train(train_loader, model, optimizer, epoch, args, batch_counter=0):
     write_log_time = np.mean(write_log_times)
     print('Data Loading - {} s'.format(data_load_time))
     print('Chunking - {} s'.format(chunk_time*args.batch_chunks))
-    print('Sending to CUDA - {} s'.format(to_cuda_time*args.batch_chunks))
+    print('Sending to CUDA - {} s'.format(to_cuda_time))
     print('Model Forward - {} s'.format(model_forward_time*args.batch_chunks))
     print('Postprocessing - {} s'.format(postprocess_time*args.batch_chunks))
     print('Calculating Loss - {} s'.format(calc_loss_time*args.batch_chunks))

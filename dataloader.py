@@ -17,7 +17,7 @@ class MoleculeDataset(Dataset):
     """
     PyTorch Dataset class to load molecular images and InChIs
     """
-    def __init__(self, mode, shard_id, source_dir, prerotated=True, rotate=True, p=0.5):
+    def __init__(self, mode, shard_id, source_dir, prerotated=False, rotate=True, p=0.5):
         self.mode = mode
         self.shard_id = shard_id
         self.prerotated = prerotated
