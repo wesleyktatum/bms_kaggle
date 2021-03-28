@@ -53,7 +53,7 @@ def main(args):
     if args.checkpoint_fn is not None:
         pass
     else:
-        encoder = axial18s()
+        encoder = axial18srpe()
         decoder = biLSTM512(vocab_size=vocab_size, device=DEVICE)
         model = CaptionModel(encoder, decoder)
         start_epoch = 0
