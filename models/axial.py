@@ -138,7 +138,7 @@ class AxialAttentionReducedPosEmbeddings(nn.Module):
         self.qkv_transform = qkv_transform(in_planes, out_planes * 2, kernel_size=1, stride=1,
                                            padding=0, bias=False)
         self.bn_qkv = nn.BatchNorm1d(out_planes * 2)
-        self.bn_similarity = nn.BatchNorm2d(groups * 3)
+        self.bn_similarity = nn.BatchNorm2d(groups * 2)
         #self.bn_qk = nn.BatchNorm2d(groups)
         #self.bn_qr = nn.BatchNorm2d(groups)
         #self.bn_kr = nn.BatchNorm2d(groups)
@@ -187,10 +187,16 @@ class AxialAttentionReducedPosEmbeddings(nn.Module):
         print('-- Stacking Query Operations --')
         print(stacked_similarity.shape)
         stacked_similarity = self.bn_similarity(stacked_similarity).view(N * W, 3, self.groups, H, H).sum(dim=1)
+        print('-- BatchNorm Query Operations --')
+        print(stacked_similarity.shape)
         #stacked_similarity = self.bn_qr(qr) + self.bn_kr(kr) + self.bn_qk(qk)
         # (N, groups, H, H, W)
         similarity = F.softmax(stacked_similarity, dim=3)
+        print('-- SoftMax Query Operations --')
+        print(similarity.shape)
         sv = torch.einsum('bgij,bgcj->bgci', similarity, v)
+        print('-- Query Product dot Values --')
+        print(sv.shape)
         output = self.bn_output(sv).view(N, W, self.out_planes, 2, H).sum(dim=-2)
 
         if self.width:
