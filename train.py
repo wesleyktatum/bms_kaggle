@@ -107,7 +107,7 @@ def main(args):
             while len(epoch_str) < 3:
                 epoch_str = '0' + epoch_str
             if args.model_name is not None:
-                save_fn = os.path.join(args.save_dir, 'model_'+args.model_name+epoch_str+'.ckpt')
+                save_fn = os.path.join(args.save_dir, 'model_'+args.model_name+'_'+epoch_str+'.ckpt')
             else:
                 save_fn = os.path.join(args.save_dir, 'model_'+epoch_str+'.ckpt')
             save(model, optimizer, args, epoch+1, save_fn)
