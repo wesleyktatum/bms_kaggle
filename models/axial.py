@@ -155,12 +155,12 @@ class AxialAttentionNet(nn.Module):
         self.bn1 = norm_layer(self.inplanes)
         self.relu = nn.ReLU(inplace=True)
         self.maxpool = nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
-        self.layer1 = self._make_layer(block, int(128 * s), layers[0], kernel_size=32)
-        self.layer2 = self._make_layer(block, int(256 * s), layers[1], stride=2, kernel_size=32,
+        self.layer1 = self._make_layer(block, int(128 * s), layers[0], kernel_size=64)
+        self.layer2 = self._make_layer(block, int(256 * s), layers[1], stride=2, kernel_size=64,
                                        dilate=replace_stride_with_dilation[0])
-        self.layer3 = self._make_layer(block, int(512 * s), layers[2], stride=2, kernel_size=16,
+        self.layer3 = self._make_layer(block, int(512 * s), layers[2], stride=2, kernel_size=32,
                                        dilate=replace_stride_with_dilation[1])
-        self.layer4 = self._make_layer(block, int(1024 * s), layers[3], stride=2, kernel_size=8,
+        self.layer4 = self._make_layer(block, int(1024 * s), layers[3], stride=2, kernel_size=16,
                                        dilate=replace_stride_with_dilation[2])
 
         for m in self.modules():
