@@ -87,6 +87,80 @@ class AxialAttention(nn.Module):
         #nn.init.uniform_(self.relative, -0.1, 0.1)
         nn.init.normal_(self.relative, 0., math.sqrt(1. / self.group_planes))
 
+class AxialAttentionReducedPosEmbeddings(nn.Module):
+    def __init__(self, in_planes, out_planes, groups=8, kernel_size=64,
+                 stride=1, bias=False, width=False):
+        assert (in_planes % groups == 0) and (out_planes % groups == 0)
+        super().__init__()
+        self.in_planes = in_planes
+        self.out_planes = out_planes
+        self.groups = groups
+        self.group_planes = out_planes // groups
+        self.kernel_size = kernel_size
+        self.stride = stride
+        self.bias = bias
+        self.width = width
+
+        # Multi-head self attention
+        self.qkv_transform = qkv_transform(in_planes, out_planes * 2, kernel_size=1, stride=1,
+                                           padding=0, bias=False)
+        self.bn_qkv = nn.BatchNorm1d(out_planes * 2)
+        self.bn_similarity = nn.BatchNorm2d(groups * 3)
+        #self.bn_qk = nn.BatchNorm2d(groups)
+        #self.bn_qr = nn.BatchNorm2d(groups)
+        #self.bn_kr = nn.BatchNorm2d(groups)
+        self.bn_output = nn.BatchNorm1d(out_planes * 2)
+
+        # Position embedding
+        self.relative = nn.Parameter(torch.randn(self.group_planes // 2, kernel_size * 2 - 1), requires_grad=True)
+        query_index = torch.arange(kernel_size).unsqueeze(0)
+        key_index = torch.arange(kernel_size).unsqueeze(1)
+        relative_index = key_index - query_index + kernel_size - 1
+        self.register_buffer('flatten_index', relative_index.view(-1))
+        if stride > 1:
+            self.pooling = nn.AvgPool2d(stride, stride=stride)
+
+        self.reset_parameters()
+
+    def forward(self, x):
+        if self.width:
+            x = x.permute(0, 2, 1, 3)
+        else:
+            x = x.permute(0, 3, 1, 2)  # N, W, C, H
+        N, W, C, H = x.shape
+        x = x.contiguous().view(N * W, C, H)
+
+        # Transformations
+        qkv = self.bn_qkv(self.qkv_transform(x))
+        q, k, v = torch.split(qkv.reshape(N * W, self.groups, self.group_planes * 2, H), [self.group_planes // 2, self.group_planes // 2, self.group_planes], dim=2)
+
+        # Calculate position embedding
+        q_embedding = torch.index_select(self.relative, 1, self.flatten_index).view(self.group_planes * 2, self.kernel_size, self.kernel_size)
+        qr = torch.einsum('bgci,cij->bgij', q, q_embedding)
+        qk = torch.einsum('bgci, bgcj->bgij', q, k)
+        stacked_similarity = torch.cat([qk, qr], dim=1)
+        stacked_similarity = self.bn_similarity(stacked_similarity).view(N * W, 3, self.groups, H, H).sum(dim=1)
+        #stacked_similarity = self.bn_qr(qr) + self.bn_kr(kr) + self.bn_qk(qk)
+        # (N, groups, H, H, W)
+        similarity = F.softmax(stacked_similarity, dim=3)
+        sv = torch.einsum('bgij,bgcj->bgci', similarity, v)
+        output = self.bn_output(sv).view(N, W, self.out_planes, 2, H).sum(dim=-2)
+
+        if self.width:
+            output = output.permute(0, 2, 1, 3)
+        else:
+            output = output.permute(0, 2, 3, 1)
+
+        if self.stride > 1:
+            output = self.pooling(output)
+
+        return output
+
+    def reset_parameters(self):
+        self.qkv_transform.weight.data.normal_(0, math.sqrt(1. / self.in_planes))
+        #nn.init.uniform_(self.relative, -0.1, 0.1)
+        nn.init.normal_(self.relative, 0., math.sqrt(1. / self.group_planes))
+
 class AxialBlock(nn.Module):
     expansion = 2
 
@@ -114,9 +188,49 @@ class AxialBlock(nn.Module):
         out = self.bn1(out)
         out = self.relu(out)
 
-        print('-- Height Block --')
         out = self.hight_block(out)
-        print('-- Width Block --')
+        out = self.width_block(out)
+        out = self.relu(out)
+
+        out = self.conv_up(out)
+        out = self.bn2(out)
+
+        if self.downsample is not None:
+            identity = self.downsample(x)
+
+        out += identity
+        out = self.relu(out)
+
+        return out
+
+class AxialBlockReducedPosEmbeddings(nn.Module):
+    expansion = 2
+
+    def __init__(self, inplanes, planes, stride=1, downsample=None, groups=1,
+                 base_width=64, dilation=1, norm_layer=None, kernel_size=64):
+        super(AxialBlock, self).__init__()
+        if norm_layer is None:
+            norm_layer = nn.BatchNorm2d
+        width = int(planes * (base_width / 64.))
+        # Both self.conv2 and self.downsample layers downsample the input when stride != 1
+        self.conv_down = conv1x1(inplanes, width)
+        self.bn1 = norm_layer(width)
+        self.hight_block = AxialAttentionReducedPosEmbeddings(width, width, groups=groups, kernel_size=kernel_size)
+        self.width_block = AxialAttentionReducedPosEmbeddings(width, width, groups=groups, kernel_size=kernel_size, stride=stride, width=True)
+        self.conv_up = conv1x1(width, planes * self.expansion)
+        self.bn2 = norm_layer(planes * self.expansion)
+        self.relu = nn.ReLU(inplace=True)
+        self.downsample = downsample
+        self.stride = stride
+
+    def forward(self, x):
+        identity = x
+
+        out = self.conv_down(x)
+        out = self.bn1(out)
+        out = self.relu(out)
+
+        out = self.hight_block(out)
         out = self.width_block(out)
         out = self.relu(out)
 
@@ -228,6 +342,11 @@ class AxialAttentionNet(nn.Module):
 
     def forward(self, x):
         return self._forward_impl(x)
+
+def axial18srpe(pretrained=False, **kwargs):
+    model = AxialAttentionNet(AxialBlockReducedPosEmbeddings, [2, 2, 2, 2],
+                              s=0.5, **kwargs)
+    return model
 
 def axial18s(pretrained=False, **kwargs):
     model = AxialAttentionNet(AxialBlock, [2, 2, 2, 2], s=0.5, **kwargs)
