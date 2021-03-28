@@ -54,9 +54,9 @@ def main(args):
         pass
     else:
         if args.encoder == 'axials':
-            encoder = axial18s()
+            encoder = axial18s(img_size=args.img_size)
         elif args.encoder == 'axialsrpe':
-            encoder = axial18srpe()
+            encoder = axial18srpe(img_size=args.img_size)
         decoder = biLSTM512(vocab_size=vocab_size, device=DEVICE)
         model = CaptionModel(encoder, decoder)
         start_epoch = 0

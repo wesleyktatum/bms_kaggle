@@ -249,7 +249,7 @@ class AxialBlockReducedPosEmbeddings(nn.Module):
 
 class AxialAttentionNet(nn.Module):
 
-    def __init__(self, block, layers, num_classes=1000, zero_init_residual=True,
+    def __init__(self, block, layers, img_size, num_classes=1000, zero_init_residual=True,
                  groups=8, width_per_group=64, replace_stride_with_dilation=None,
                  norm_layer=None, s=0.5):
         super(AxialAttentionNet, self).__init__()
@@ -273,12 +273,12 @@ class AxialAttentionNet(nn.Module):
         self.bn1 = norm_layer(self.inplanes)
         self.relu = nn.ReLU(inplace=True)
         self.maxpool = nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
-        self.layer1 = self._make_layer(block, int(64 * s), layers[0], kernel_size=64)
-        self.layer2 = self._make_layer(block, int(128 * s), layers[1], stride=2, kernel_size=64,
+        self.layer1 = self._make_layer(block, int(64 * s), layers[0], kernel_size=img_size//4)
+        self.layer2 = self._make_layer(block, int(128 * s), layers[1], stride=2, kernel_size=img_size//4,
                                        dilate=replace_stride_with_dilation[0])
-        self.layer3 = self._make_layer(block, int(256 * s), layers[2], stride=2, kernel_size=32,
+        self.layer3 = self._make_layer(block, int(256 * s), layers[2], stride=2, kernel_size=img_size//8,
                                        dilate=replace_stride_with_dilation[1])
-        self.layer4 = self._make_layer(block, int(512 * s), layers[3], stride=2, kernel_size=16,
+        self.layer4 = self._make_layer(block, int(512 * s), layers[3], stride=2, kernel_size=img_size//16,
                                        dilate=replace_stride_with_dilation[2])
 
         for m in self.modules():
@@ -345,30 +345,30 @@ class AxialAttentionNet(nn.Module):
     def forward(self, x):
         return self._forward_impl(x)
 
-def axial18srpe(pretrained=False, **kwargs):
+def axial18srpe(img_size, pretrained=False, **kwargs):
     model = AxialAttentionNet(AxialBlockReducedPosEmbeddings, [2, 2, 2, 2],
-                              s=0.5, **kwargs)
+                              img_size, s=0.5, **kwargs)
     return model
 
-def axial18s(pretrained=False, **kwargs):
-    model = AxialAttentionNet(AxialBlock, [2, 2, 2, 2], s=0.5, **kwargs)
+def axial18s(img_size, pretrained=False, **kwargs):
+    model = AxialAttentionNet(AxialBlock, [2, 2, 2, 2], img_size, s=0.5, **kwargs)
     return model
 
-def axial26s(pretrained=False, **kwargs):
-    model = AxialAttentionNet(AxialBlock, [1, 2, 4, 1], s=0.5, **kwargs)
-    return model
-
-
-def axial50s(pretrained=False, **kwargs):
-    model = AxialAttentionNet(AxialBlock, [3, 4, 6, 3], s=0.5, **kwargs)
+def axial26s(img_size, pretrained=False, **kwargs):
+    model = AxialAttentionNet(AxialBlock, [1, 2, 4, 1], img_size, s=0.5, **kwargs)
     return model
 
 
-def axial50m(pretrained=False, **kwargs):
-    model = AxialAttentionNet(AxialBlock, [3, 4, 6, 3], s=0.75, **kwargs)
+def axial50s(img_size, pretrained=False, **kwargs):
+    model = AxialAttentionNet(AxialBlock, [3, 4, 6, 3], img_size, s=0.5, **kwargs)
     return model
 
 
-def axial50l(pretrained=False, **kwargs):
-    model = AxialAttentionNet(AxialBlock, [3, 4, 6, 3], s=1, **kwargs)
+def axial50m(img_size, pretrained=False, **kwargs):
+    model = AxialAttentionNet(AxialBlock, [3, 4, 6, 3], img_size, s=0.75, **kwargs)
+    return model
+
+
+def axial50l(img_size, pretrained=False, **kwargs):
+    model = AxialAttentionNet(AxialBlock, [3, 4, 6, 3], img_size, s=1, **kwargs)
     return model
