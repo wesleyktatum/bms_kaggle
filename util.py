@@ -310,3 +310,29 @@ def preprocess(img_path, extensive=False):
         img = np.dstack((img, vertices))
     img = np.transpose(img, (2, 0, 1))
     return img
+
+
+########################################################
+######## TROUBLESHOOTING FUNCTIONS #####################
+########################################################
+
+def plot_grad_flow(named_parameters):
+    ave_grads = []
+    layers = []
+    for n, p in named_parameters:
+        if(p.requires_grad) and ("bias" not in n):
+            layers.append(n.split('.weight')[0])
+            ave_grads.append(p.grad.abs().mean())
+    layers = np.array(layers)
+    ave_grads = np.array(ave_grads)
+    fig = plt.figure(figsize=(14,6))
+    plt.plot(ave_grads, alpha=0.3, color="b")
+    plt.hlines(0, 0, len(ave_grads)+1, linewidth=1, color="k" )
+    plt.xticks(range(0,len(ave_grads), 1), layers, rotation="vertical", fontsize=10)
+    plt.xlim(xmin=0, xmax=len(ave_grads))
+    # plt.ylim(ymin=0, ymax=5e-3)
+    plt.xlabel("Layers")
+    plt.ylabel("average gradient")
+    plt.grid(True)
+    plt.tight_layout()
+    return plt

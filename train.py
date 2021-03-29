@@ -1,5 +1,7 @@
 import os
 os.environ['KMP_DUPLICATE_LIB_OK']='True'
+import shutil
+import imageio
 from time import perf_counter
 import argparse
 import numpy as np
@@ -61,6 +63,10 @@ def main(args):
         model = CaptionModel(encoder, decoder)
         start_epoch = 0
 
+    if args.make_grad_gif:
+        os.makedirs('{}_gif'.format(args.model_name), exist_ok=True)
+        args.images = []
+
     model = model.to(DEVICE)
     encoder_optimizer = torch.optim.Adam(params=encoder.parameters(), lr=args.encoder_lr)
     decoder_optimizer = torch.optim.Adam(params=decoder.parameters(), lr=args.decoder_lr)
@@ -71,7 +77,7 @@ def main(args):
 
     for epoch in range(start_epoch, start_epoch+args.n_epochs):
         mode = 'train'
-        train_shard_ids = np.random.choice(np.arange(n_train_shards), size=n_train_shards,
+        train_shard_ids = np.random.choice(np.arange(n_train_shards), size=1,
                                            replace=False)
         train_losses = []
         batch_counter = 0
@@ -88,7 +94,7 @@ def main(args):
         train_loss = np.mean(train_losses)
 
         mode = 'val'
-        val_shard_ids = np.random.choice(np.arange(n_val_shards), size=n_val_shards,
+        val_shard_ids = np.random.choice(np.arange(n_val_shards), size=1,
                                          replace=False)
         val_losses = []
         batch_counter = 0
@@ -112,7 +118,11 @@ def main(args):
                 save_fn = os.path.join(args.save_dir, 'model_'+args.model_name+'_'+epoch_str+'.ckpt')
             else:
                 save_fn = os.path.join(args.save_dir, 'model_'+epoch_str+'.ckpt')
-            save(model, optimizer, args, epoch+1, save_fn)
+            save(model, optimizers, args, epoch+1, save_fn)
+
+    if args.make_grad_gif:
+        imageio.mimsave('grads.gif', args.images)
+        shutil.rmtree('{}_gif'.format(args.model_name))
 
 
 def train(train_loader, model, optimizers, epoch, args, batch_counter=0):
@@ -183,6 +193,12 @@ def train(train_loader, model, optimizers, epoch, args, batch_counter=0):
 
         if args.grad_clip is not None:
             clip_gradient(optimizer, args.grad_clip)
+
+        if args.make_grad_gif:
+            grads = plot_grad_flow(model.named_parameters())
+            grads.savefig('{}_gif/{}_{}.png'.format(args.model_name, epoch, batch_counter))
+            grads.close()
+            args.images.append(imageio.imread('{}_gif/{}_{}.png'.format(args.model_name, epoch, batch_counter)))
 
         # optimizer_start = perf_counter()
         for optimizer in optimizers:
@@ -295,10 +311,12 @@ def validate(val_loader, model, epoch, args, batch_counter=0):
     val_loss = np.mean(losses)
     return val_loss, batch_counter
 
-def save(model, optimizer, args, epoch, save_fn):
+def save(model, optimizers, args, epoch, save_fn):
+    enc_optimizer, dec_optimizer = optimizers
     save_state = {'epoch': epoch,
                   'model_state_dict': model.state_dict(),
-                  'optimizer_state_dict': optimizer.state_dict(),
+                  'enc_optimizer_state_dict': enc_optimizer.state_dict(),
+                  'dec_optimizer_state_dict': dec_optimizer.state_dict(),
                   'args': {}}
     for arg in vars(args):
         save_state[arg] = getattr(args, arg)
@@ -326,6 +344,7 @@ if __name__ == '__main__':
     parser.add_argument('--prerotated', default=False, action='store_true')
     parser.add_argument('--encoder', choices=['resnet', 'axials', 'axialsrpe'],
                         default='axialsrpe')
+    parser.add_argument('--make_grad_gif', default=False, action='store_true')
 
     args = parser.parse_args()
     main(args)
