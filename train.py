@@ -121,7 +121,7 @@ def main(args):
             save(model, optimizers, args, epoch+1, save_fn)
 
     if args.make_grad_gif:
-        imageio.mimsave('grads.gif', args.images)
+        imageio.mimsave('{}_grads.gif'.format(args.model_name), args.images)
         shutil.rmtree('{}_gif'.format(args.model_name))
 
 
