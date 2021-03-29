@@ -12,6 +12,7 @@ from loss import ce_loss
 from dataloader import MoleculeDataset
 from models.sasa import ResNet26, ResNet38, ResNet50
 from models.axial import axial18s, axial18srpe, axial26s, axial50s, axial50m, axial50l
+from models.resnet import resnet18
 from models.bilstm import biLSTM512
 from models.caption import CaptionModel
 
@@ -19,6 +20,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.nn.utils.rnn import pack_padded_sequence
+
+from albumentations import Compose, Normalize
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -57,8 +60,35 @@ def main(args):
     else:
         if args.encoder == 'axials':
             encoder = axial18s(img_size=args.img_size)
+            resnet_transform = None
+            pretrained_resnet = False
+            finetune_encoder = True
         elif args.encoder == 'axialsrpe':
             encoder = axial18srpe(img_size=args.img_size)
+            resnet_transform = None
+            pretrained_resnet = False
+            finetune_encoder = True
+        elif args.encoder == 'resnet':
+            encoder = resnet18(pretrained=False, finetune=True)
+            resnet_transform = None
+            pretrained_resnet = False
+            finetune_encoder = True
+        elif args.encoder == 'resnet_frozen':
+            encoder = resnet18(pretrained=True, finetune=False)
+            resnet_transform = Compose([Normalize(
+                                mean=[0.485, 0.456, 0.406],
+                                std=[0.229, 0.224, 0.225]
+                                )])
+            pretrained_resnet = True
+            finetune_encoder = False
+        elif args.encoder == 'resnet_finetune':
+            encoder = resnet18(pretrained=True, finetune=True)
+            resnet_transform = Compose([Normalize(
+                                mean=[0.485, 0.456, 0.406],
+                                std=[0.229, 0.224, 0.225]
+                                )])
+            pretrained_resnet = True
+            finetune_encoder = True
         decoder = biLSTM512(vocab_size=vocab_size, device=DEVICE)
         model = CaptionModel(encoder, decoder)
         start_epoch = 0
@@ -68,7 +98,10 @@ def main(args):
         args.images = []
 
     model = model.to(DEVICE)
-    encoder_optimizer = torch.optim.Adam(params=encoder.parameters(), lr=args.encoder_lr)
+    if finetune_encoder:
+        encoder_optimizer = torch.optim.Adam(params=encoder.parameters(), lr=args.encoder_lr)
+    else:
+        encoder_optimizer = None
     decoder_optimizer = torch.optim.Adam(params=decoder.parameters(), lr=args.decoder_lr)
     optimizers = [encoder_optimizer, decoder_optimizer]
 
@@ -83,7 +116,7 @@ def main(args):
         batch_counter = 0
         for shard_id in train_shard_ids:
             mol_train = MoleculeDataset(mode, shard_id, args.imgs_dir, args.img_size,
-                                        args.prerotated)
+                                        args.prerotated, pretrained_resnet, resnet_transform)
             train_loader = torch.utils.data.DataLoader(mol_train, batch_size=args.batch_size,
                                                        shuffle=True, num_workers=0,
                                                        pin_memory=False, drop_last=True)
@@ -100,7 +133,7 @@ def main(args):
         batch_counter = 0
         for shard_id in val_shard_ids:
             val_train = MoleculeDataset(mode, shard_id, args.imgs_dir, args.img_size,
-                                        args.prerotated)
+                                        args.prerotated, pretrained_resnet, resnet_transform)
             val_loader = torch.utils.data.DataLoader(val_train, batch_size=args.batch_size,
                                                      shuffle=True, num_workers=0,
                                                      pin_memory=False, drop_last=True)
@@ -128,7 +161,8 @@ def main(args):
 def train(train_loader, model, optimizers, epoch, args, batch_counter=0):
 
     for optimizer in optimizers:
-        optimizer.zero_grad()
+        if optimizer is not None:
+            optimizer.zero_grad()
     model.train()
     start_time = perf_counter()
     losses = []
@@ -202,9 +236,11 @@ def train(train_loader, model, optimizers, epoch, args, batch_counter=0):
 
         # optimizer_start = perf_counter()
         for optimizer in optimizers:
-            optimizer.step()
+            if optimizer is not None:
+                optimizer.step()
         for optimizer in optimizers:
-            optimizer.zero_grad()
+            if optimizer is not None:
+                optimizer.zero_grad()
         # optimizer_end = perf_counter()
         # optimizer_times.append(optimizer_end - optimizer_start)
         ############################
@@ -313,9 +349,13 @@ def validate(val_loader, model, epoch, args, batch_counter=0):
 
 def save(model, optimizers, args, epoch, save_fn):
     enc_optimizer, dec_optimizer = optimizers
+    if enc_optimizer is None:
+        enc_state_dict = None
+    else:
+        enc_state_dict = enc_optimizer.state_dict()
     save_state = {'epoch': epoch,
                   'model_state_dict': model.state_dict(),
-                  'enc_optimizer_state_dict': enc_optimizer.state_dict(),
+                  'enc_optimizer_state_dict': enc_state_dict,
                   'dec_optimizer_state_dict': dec_optimizer.state_dict(),
                   'args': {}}
     for arg in vars(args):
@@ -342,7 +382,7 @@ if __name__ == '__main__':
     parser.add_argument('--grad_clip', type=float, default=5.)
     parser.add_argument('--alpha_c', type=float, default=1.)
     parser.add_argument('--prerotated', default=False, action='store_true')
-    parser.add_argument('--encoder', choices=['resnet', 'axials', 'axialsrpe'],
+    parser.add_argument('--encoder', choices=['resnet', 'resnet_frozen', 'resnet_finetune' 'axials', 'axialsrpe'],
                         default='axialsrpe')
     parser.add_argument('--make_grad_gif', default=False, action='store_true')
 
