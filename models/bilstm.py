@@ -59,7 +59,6 @@ class biLSTM(nn.Module):
         return h, c
 
     def forward(self, encoder_out, encoded_inchis, inchi_lengths):
-        print(encoder_out.shape)
         batch_size = encoder_out.size(0)
         encoder_dim = encoder_out.size(-1)
         vocab_size = self.vocab_size

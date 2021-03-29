@@ -62,14 +62,16 @@ def main(args):
         start_epoch = 0
 
     model = model.to(DEVICE)
-    optimizer = torch.optim.Adam(params=model.parameters(), lr=args.lr)
+    encoder_optimizer = torch.optim.Adam(params=encoder.parameters(), lr=args.encoder_lr)
+    decoder_optimizer = torch.optim.Adam(params=decoder.parameters(), lr=args.decoder_lr)
+    optimizers = [encoder_optimizer, decoder_optimizer]
 
     n_train_shards = get_n_shards(train_dir)
     n_val_shards = get_n_shards(val_dir)
 
     for epoch in range(start_epoch, start_epoch+args.n_epochs):
         mode = 'train'
-        train_shard_ids = np.random.choice(np.arange(n_train_shards), size=1,
+        train_shard_ids = np.random.choice(np.arange(n_train_shards), size=n_train_shards,
                                            replace=False)
         train_losses = []
         batch_counter = 0
@@ -79,7 +81,7 @@ def main(args):
             train_loader = torch.utils.data.DataLoader(mol_train, batch_size=args.batch_size,
                                                        shuffle=True, num_workers=0,
                                                        pin_memory=False, drop_last=True)
-            train_loss, batch_counter = train(train_loader, model, optimizer, epoch, args,
+            train_loss, batch_counter = train(train_loader, model, optimizers, epoch, args,
                                               batch_counter=batch_counter)
             train_losses.append(train_loss)
             del mol_train, train_loader
@@ -113,8 +115,10 @@ def main(args):
             save(model, optimizer, args, epoch+1, save_fn)
 
 
-def train(train_loader, model, optimizer, epoch, args, batch_counter=0):
+def train(train_loader, model, optimizers, epoch, args, batch_counter=0):
 
+    for optimizer in optimizers:
+        optimizer.zero_grad()
     model.train()
     start_time = perf_counter()
     losses = []
@@ -181,8 +185,10 @@ def train(train_loader, model, optimizer, epoch, args, batch_counter=0):
             clip_gradient(optimizer, args.grad_clip)
 
         # optimizer_start = perf_counter()
-        optimizer.step()
-        optimizer.zero_grad()
+        for optimizer in optimizers:
+            optimizer.step()
+        for optimizer in optimizers:
+            optimizer.zero_grad()
         # optimizer_end = perf_counter()
         # optimizer_times.append(optimizer_end - optimizer_start)
         ############################
@@ -312,7 +318,8 @@ if __name__ == '__main__':
                         default=256)
     parser.add_argument('--batch_size', type=int, default=256)
     parser.add_argument('--batch_chunks', type=int, default=16)
-    parser.add_argument('--lr', type=float, default=1e-4)
+    parser.add_argument('--encoder_lr', type=float, default=1e-4)
+    parser.add_argument('--decoder_lr', type=float, default=4e-4)
     parser.add_argument('--n_epochs', type=int, default=5)
     parser.add_argument('--grad_clip', type=float, default=5.)
     parser.add_argument('--alpha_c', type=float, default=1.)
