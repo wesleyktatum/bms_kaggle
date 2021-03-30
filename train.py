@@ -381,7 +381,7 @@ if __name__ == '__main__':
     parser.add_argument('--grad_clip', type=float, default=5.)
     parser.add_argument('--alpha_c', type=float, default=1.)
     parser.add_argument('--prerotated', default=False, action='store_true')
-    parser.add_argument('--encoder', choices=['resnet', 'resnet_frozen', 'resnet_finetune' 'axials', 'axialsrpe'],
+    parser.add_argument('--encoder', choices=['resnet', 'resnet_frozen', 'resnet_finetune', 'axials', 'axialsrpe'],
                         default='axialsrpe')
     parser.add_argument('--make_grad_gif', default=False, action='store_true')
 
