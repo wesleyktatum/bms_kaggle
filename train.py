@@ -73,7 +73,8 @@ def main(args):
             pretrained_resnet = False
             finetune_encoder = True
         elif args.encoder == 'resnet_frozen':
-            encoder = resnet18(pretrained=True, finetune=False)
+            ckpt_fn = os.path.join(args.save_dir, 'resnet18.ckpt')
+            encoder = resnet18(pretrained=True, finetune=False, ckpt_fn=ckpt_fn)
             resnet_transform = Compose([Normalize(
                                 mean=[0.485, 0.456, 0.406],
                                 std=[0.229, 0.224, 0.225]
@@ -81,7 +82,8 @@ def main(args):
             pretrained_resnet = True
             finetune_encoder = False
         elif args.encoder == 'resnet_finetune':
-            encoder = resnet18(pretrained=True, finetune=True)
+            ckpt_fn = os.path.join(args.save_dir, 'resnet18.ckpt')
+            encoder = resnet18(pretrained=True, finetune=True, ckpt_fn=ckpt_fn)
             resnet_transform = Compose([Normalize(
                                 mean=[0.485, 0.456, 0.406],
                                 std=[0.229, 0.224, 0.225]

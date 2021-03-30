@@ -204,11 +204,10 @@ class ResNet(nn.Module):
         return self._forward_impl(x)
 
 
-def _resnet(arch, block, layers, pretrained, finetune, progress, **kwargs):
+def _resnet(arch, block, layers, pretrained, finetune, progress, ckpt_fn, **kwargs):
     model = ResNet(block, layers, pretrained, **kwargs)
     if pretrained:
-        state_dict = load_state_dict_from_url(model_urls[arch],
-                                              progress=progress)
+        state_dict = torch.load(ckpt_fn, map_location=torch.device('cpu'))
         del_keys = []
         for key in state_dict.keys():
             if key.split('.')[0] == 'fc':
@@ -222,7 +221,7 @@ def _resnet(arch, block, layers, pretrained, finetune, progress, **kwargs):
     return model
 
 
-def resnet18(pretrained=False, finetune=True, progress=True, **kwargs):
+def resnet18(pretrained=False, finetune=True, progress=True, ckpt_fn=None, **kwargs):
     r"""ResNet-18 model from
     `"Deep Residual Learning for Image Recognition" <https://arxiv.org/pdf/1512.03385.pdf>`_
     Args:
@@ -230,4 +229,4 @@ def resnet18(pretrained=False, finetune=True, progress=True, **kwargs):
         progress (bool): If True, displays a progress bar of the download to stderr
     """
     return _resnet('resnet18', BasicBlock, [2, 2, 2, 2], pretrained, finetune, progress,
-                   **kwargs)
+                   ckpt_fn, **kwargs)
