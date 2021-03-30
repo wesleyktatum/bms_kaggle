@@ -51,7 +51,7 @@ def main(args):
         already_wrote = False
     log_file = open(args.log_fn, 'a')
     if not already_wrote:
-        log_file.write('epoch,batch_idx,data_type,bce_loss,alpha_norm_loss,tot_loss,run_time\n')
+        log_file.write('epoch,batch_idx,data_type,loss,run_time\n')
     log_file.close()
 
     if args.checkpoint_fn is not None:
@@ -189,8 +189,6 @@ def train(train_loader, model, optimizers, epoch, args, batch_counter=0):
         # data_load_end = perf_counter()
         # data_load_times.append(data_load_end - data_load_start)
         avg_losses = []
-        avg_bce_losses = []
-        avg_alpha_norm_losses = []
         for j in range(args.batch_chunks):
             # chunk_start = perf_counter()
             imgs = batch_imgs[j*args.chunk_size:(j+1)*args.chunk_size,:,:,:]
@@ -213,7 +211,7 @@ def train(train_loader, model, optimizers, epoch, args, batch_counter=0):
             # postprocess_times.append(postprocess_end - postprocess_start)
 
             # calc_loss_start = perf_counter()
-            loss, bce, alpha_norm = ce_loss(targets, preds, alphas, args.char_weights, args.alpha_c)
+            loss = ce_loss(targets, preds, args.char_weights)
             # calc_loss_end = perf_counter()
             # calc_loss_times.append(calc_loss_end - calc_loss_start)
 
@@ -223,8 +221,6 @@ def train(train_loader, model, optimizers, epoch, args, batch_counter=0):
             # backprop_times.append(backprop_end - backprop_start)
 
             avg_losses.append(loss.item())
-            avg_bce_losses.append(bce.item())
-            avg_alpha_norm_losses.append(alpha_norm.item())
 
         if args.grad_clip is not None:
             clip_gradient(optimizer, args.grad_clip)
@@ -249,19 +245,15 @@ def train(train_loader, model, optimizers, epoch, args, batch_counter=0):
         stop_time = perf_counter()
         batch_time = round(stop_time - start_time, 5)
         avg_loss = round(np.mean(avg_losses), 5)
-        avg_bce_loss = round(np.mean(avg_bce_losses), 5)
-        avg_alpha_norm_loss = round(np.mean(avg_alpha_norm_losses), 5)
         losses.append(avg_loss)
         batch_counter += 1
 
         # Log
         # write_log_start = perf_counter()
         log_file = open(args.log_fn, 'a')
-        log_file.write('{},{},{},{},{},{},{}\n'.format(epoch,
+        log_file.write('{},{},{},{},{}\n'.format(epoch,
                                                  batch_counter,
                                                  'train',
-                                                 avg_bce_loss,
-                                                 avg_alpha_norm_loss,
                                                  avg_loss,
                                                  batch_time))
         log_file.close()
@@ -304,8 +296,6 @@ def validate(val_loader, model, epoch, args, batch_counter=0):
             batch_encoded_inchis = batch_encoded_inchis.to(DEVICE)
             batch_inchi_lengths = batch_inchi_lengths.unsqueeze(1).to(DEVICE)
             avg_losses = []
-            avg_bce_losses = []
-            avg_alpha_norm_losses = []
             for j in range(args.batch_chunks):
                 imgs = batch_imgs[j*args.chunk_size:(j+1)*args.chunk_size,:,:,:]
                 encoded_inchis = batch_encoded_inchis[j*args.chunk_size:(j+1)*args.chunk_size,:]
@@ -318,27 +308,21 @@ def validate(val_loader, model, epoch, args, batch_counter=0):
                 preds = pack_padded_sequence(preds, decode_lengths, batch_first=True).data
                 targets = pack_padded_sequence(targets, decode_lengths, batch_first=True).data
 
-                loss, bce, alpha_norm = ce_loss(targets, preds, alphas, args.char_weights, args.alpha_c)
+                loss = ce_loss(targets, preds, args.char_weights)
 
                 avg_losses.append(loss.item())
-                avg_bce_losses.append(bce.item())
-                avg_alpha_norm_losses.append(alpha_norm.item())
 
             stop_time = perf_counter()
             batch_time = round(stop_time - start_time, 5)
             avg_loss = round(np.mean(avg_losses), 5)
-            avg_bce_loss = round(np.mean(avg_bce_losses), 5)
-            avg_alpha_norm_loss = round(np.mean(avg_alpha_norm_losses), 5)
             losses.append(avg_loss)
             batch_counter += 1
 
             # Log
             log_file = open(args.log_fn, 'a')
-            log_file.write('{},{},{},{},{},{},{}\n'.format(epoch,
+            log_file.write('{},{},{},{},{}\n'.format(epoch,
                                                      batch_counter,
                                                      'val',
-                                                     avg_bce_loss,
-                                                     avg_alpha_norm_loss,
                                                      avg_loss,
                                                      batch_time))
             log_file.close()
@@ -381,7 +365,6 @@ if __name__ == '__main__':
     parser.add_argument('--decoder_lr', type=float, default=4e-4)
     parser.add_argument('--n_epochs', type=int, default=5)
     parser.add_argument('--grad_clip', type=float, default=5.)
-    parser.add_argument('--alpha_c', type=float, default=1.)
     parser.add_argument('--prerotated', default=False, action='store_true')
     parser.add_argument('--encoder', choices=['resnet', 'resnet_frozen', 'resnet_finetune', 'axials', 'axialsrpe'],
                         default='axialsrpe')
