@@ -241,8 +241,8 @@ def train(train_loader, model, optimizers, epoch, args, batch_counter=0):
         if args.grad_clip is not None:
             clip_gradient(optimizer, args.grad_clip)
 
-        encoder_grad_norm = torch.nn.utils.clip_grad_norm_(encoder.parameters(), args.grad_clip)
-        decoder_grad_norm = torch.nn.utils.clip_grad_norm_(decoder.parameters(), args.grad_clip)
+        encoder_grad_norm = torch.nn.utils.clip_grad_norm_(model.encoder.parameters(), args.grad_clip)
+        decoder_grad_norm = torch.nn.utils.clip_grad_norm_(model.decoder.parameters(), args.grad_clip)
 
         if args.make_grad_gif:
             grads = plot_grad_flow(model.named_parameters())
