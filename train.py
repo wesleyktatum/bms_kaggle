@@ -20,8 +20,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.nn.utils.rnn import pack_padded_sequence
-
-from albumentations import Compose, Normalize
+from torchvision.transforms import Compose, Normalize
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
