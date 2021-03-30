@@ -19,6 +19,7 @@ from models.caption import CaptionModel
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from torch.optim.lr_scheduler import CosineAnnealingLR
 from torch.nn.utils.rnn import pack_padded_sequence
 from torchvision.transforms import Compose, Normalize
 
@@ -51,7 +52,7 @@ def main(args):
         already_wrote = False
     log_file = open(args.log_fn, 'a')
     if not already_wrote:
-        log_file.write('epoch,batch_idx,data_type,loss,run_time\n')
+        log_file.write('epoch,batch_idx,data_type,loss,enc_grad_norm,dec_grad_norm,run_time\n')
     log_file.close()
 
     if args.checkpoint_fn is not None:
@@ -100,10 +101,17 @@ def main(args):
 
     model = model.to(DEVICE)
     if finetune_encoder:
-        encoder_optimizer = torch.optim.Adam(params=encoder.parameters(), lr=args.encoder_lr)
+        encoder_optimizer = torch.optim.Adam(params=encoder.parameters(), lr=args.encoder_lr,
+                                             weight_decay=1e-6)
+        encoder_scheduler = CosineAnnealingLR(encoder_optimizer, T_max=4, eta_min=1e-6,
+                                              last_epoch=-1)
     else:
         encoder_optimizer = None
-    decoder_optimizer = torch.optim.Adam(params=decoder.parameters(), lr=args.decoder_lr)
+        encoder_scheduler = None
+    decoder_optimizer = torch.optim.Adam(params=decoder.parameters(), lr=args.decoder_lr,
+                                         weight_decay=1e-6)
+    decoder_scheduler = CosineAnnealingLR(decoder_optimizer, T_max=4, eta_min=1e-6,
+                                          last_epoch=-1)
     optimizers = [encoder_optimizer, decoder_optimizer]
 
     n_train_shards = get_n_shards(train_dir)
@@ -117,7 +125,8 @@ def main(args):
         batch_counter = 0
         for shard_id in train_shard_ids:
             mol_train = MoleculeDataset(mode, shard_id, args.imgs_dir, args.img_size,
-                                        args.prerotated, pretrained_resnet, resnet_transform)
+                                        args.prerotated, pretrained_resnet, resnet_transform,
+                                        args.rotate)
             train_loader = torch.utils.data.DataLoader(mol_train, batch_size=args.batch_size,
                                                        shuffle=True, num_workers=0,
                                                        pin_memory=False, drop_last=True)
@@ -134,7 +143,8 @@ def main(args):
         batch_counter = 0
         for shard_id in val_shard_ids:
             val_train = MoleculeDataset(mode, shard_id, args.imgs_dir, args.img_size,
-                                        args.prerotated, pretrained_resnet, resnet_transform)
+                                        args.prerotated, pretrained_resnet, resnet_transform,
+                                        args.rotate)
             val_loader = torch.utils.data.DataLoader(val_train, batch_size=args.batch_size,
                                                      shuffle=True, num_workers=0,
                                                      pin_memory=False, drop_last=True)
@@ -144,6 +154,11 @@ def main(args):
             del val_train, val_loader
         val_loss = np.mean(val_losses)
         print('Epoch - {} Train - {}, Val - {}'.format(epoch, train_loss, val_loss))
+
+        if encoder_scheduler is not None:
+            encoder_scheduler.step()
+        decoder_scheduler.step()
+
         if (epoch+1) % args.save_freq == 0:
             epoch_str = str(epoch+1)
             while len(epoch_str) < 3:
@@ -212,6 +227,7 @@ def train(train_loader, model, optimizers, epoch, args, batch_counter=0):
 
             # calc_loss_start = perf_counter()
             loss = ce_loss(targets, preds, args.char_weights)
+            loss /= args.batch_chunks
             # calc_loss_end = perf_counter()
             # calc_loss_times.append(calc_loss_end - calc_loss_start)
 
@@ -224,6 +240,9 @@ def train(train_loader, model, optimizers, epoch, args, batch_counter=0):
 
         if args.grad_clip is not None:
             clip_gradient(optimizer, args.grad_clip)
+
+        encoder_grad_norm = torch.nn.utils.clip_grad_norm_(encoder.parameters(), args.grad_clip)
+        decoder_grad_norm = torch.nn.utils.clip_grad_norm_(decoder.parameters(), args.grad_clip)
 
         if args.make_grad_gif:
             grads = plot_grad_flow(model.named_parameters())
@@ -251,10 +270,12 @@ def train(train_loader, model, optimizers, epoch, args, batch_counter=0):
         # Log
         # write_log_start = perf_counter()
         log_file = open(args.log_fn, 'a')
-        log_file.write('{},{},{},{},{}\n'.format(epoch,
+        log_file.write('{},{},{},{},{},{},{}\n'.format(epoch,
                                                  batch_counter,
                                                  'train',
                                                  avg_loss,
+                                                 encoder_grad_norm,
+                                                 decoder_grad_norm,
                                                  batch_time))
         log_file.close()
         # write_log_end = perf_counter()
@@ -320,10 +341,12 @@ def validate(val_loader, model, epoch, args, batch_counter=0):
 
             # Log
             log_file = open(args.log_fn, 'a')
-            log_file.write('{},{},{},{},{}\n'.format(epoch,
+            log_file.write('{},{},{},{},{},{},{}\n'.format(epoch,
                                                      batch_counter,
                                                      'val',
                                                      avg_loss,
+                                                     0,
+                                                     0,
                                                      batch_time))
             log_file.close()
 
@@ -359,6 +382,7 @@ if __name__ == '__main__':
     parser.add_argument('--max_inchi_length', type=int, default=350)
     parser.add_argument('--img_size', type=int, choices=[64, 128, 256],
                         default=256)
+    parser.add_argument('--rotate', default=False, action='store_true')
     parser.add_argument('--batch_size', type=int, default=256)
     parser.add_argument('--batch_chunks', type=int, default=16)
     parser.add_argument('--encoder_lr', type=float, default=1e-4)

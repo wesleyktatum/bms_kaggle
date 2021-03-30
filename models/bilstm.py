@@ -22,7 +22,7 @@ class Attention(nn.Module):
 
 class biLSTM(nn.Module):
     def __init__(self, attention_dim, embed_dim, decoder_dim, vocab_size, device,
-                 encoder_dim=512, dropout=0.1):
+                 encoder_dim=512, dropout=0.5):
         super().__init__()
         self.encoder_dim = encoder_dim
         self.attention_dim = attention_dim
@@ -101,6 +101,6 @@ class biLSTM(nn.Module):
         return predictions, encoded_inchis, decode_lengths, alphas, sort_ind
 
 def biLSTM512(vocab_size, device, d=512):
-    model = biLSTM(attention_dim=d, embed_dim=d, decoder_dim=d,
+    model = biLSTM(attention_dim=256, embed_dim=256, decoder_dim=d,
                    vocab_size=vocab_size, device=device, dropout=0.5)
     return model
