@@ -22,6 +22,10 @@ class MoleculeDataset(Dataset):
                  pretrained_resnet=False, resnet_transform=None, rotate=True, p=0.5):
         self.mode = mode
         self.shard_id = shard_id
+        if self.mode == 'train':
+            self.shard_size = 200000
+        elif self.mode == 'val':
+            self.shard_size = 25000
         self.img_size = img_size
         self.prerotated = prerotated
         self.pretrained_resnet = pretrained_resnet
@@ -76,7 +80,7 @@ class MoleculeDataset(Dataset):
 
         ### grab inchi
         # start = perf_counter()
-        inchi_idx = i + (200000*self.shard_id)
+        inchi_idx = i + (self.shard_size*self.shard_id)
         inchi_data = torch.tensor(self.encoded_inchis[inchi_idx]).long()
         encoded_inchi = inchi_data[:-1]
         inchi_length = inchi_data[-1]
