@@ -401,8 +401,8 @@ if __name__ == '__main__':
     parser.add_argument('--n_epochs', type=int, default=5)
     parser.add_argument('--grad_clip', type=float, default=5.)
     parser.add_argument('--prerotated', default=False, action='store_true')
-    parser.add_argument('--encoder', choices=['resnet', 'resnet_frozen', 'resnet_finetune', 'resnet34', 'resnet50', 'axials', 'axialsrpe'],
-                        default='axialsrpe')
+    parser.add_argument('--encoder', choices=['resnet18', 'resnet18_frozen', 'resnet18_finetune',
+                        'resnet34', 'resnet50', 'axials', 'axialsrpe'], default='axialsrpe')
     parser.add_argument('--make_grad_gif', default=False, action='store_true')
 
     args = parser.parse_args()
