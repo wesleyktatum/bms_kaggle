@@ -91,12 +91,12 @@ def main(args):
                                 )])
             pretrained_resnet = True
             finetune_encoder = True
-	elif args.encoder == 'resnet34':
+        elif args.encoder == 'resnet34':
             encoder = resnet34(pretrained=False, finetune=True)
             resnet_transform = None
             pretrained_resnet = False
             finetune_encoder = True
-	elif args.encoder == 'resnet50':
+        elif args.encoder == 'resnet50':
             encoder = resnet50(pretrained=False, finetune=True)
             resnet_transform = None
             pretrained_resnet = False
