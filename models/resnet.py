@@ -230,3 +230,11 @@ def resnet18(pretrained=False, finetune=True, progress=True, ckpt_fn=None, **kwa
     """
     return _resnet('resnet18', BasicBlock, [2, 2, 2, 2], pretrained, finetune, progress,
                    ckpt_fn, **kwargs)
+
+def resnet34(pretrained=False, finetune=True, progress=True, ckpt_fn=None, **kwargs):
+
+    return _resnet('resnet34', BasicBlock, [3, 4, 6, 3], pretrained, finetune, progress, ckpt_fn, **kwargs)
+
+def resnet50(pretrained=False, finetune=True, progress=True, ckpt_fn=None, **kwargs):
+
+    return _resnet('resnet50', BasicBlock, [3, 4, 6, 3], pretrained, finetune, progress, ckpt_fn, **kwargs)

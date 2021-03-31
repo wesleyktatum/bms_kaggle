@@ -12,7 +12,7 @@ from loss import ce_loss
 from dataloader import MoleculeDataset
 from models.sasa import ResNet26, ResNet38, ResNet50
 from models.axial import axial18s, axial18srpe, axial26s, axial50s, axial50m, axial50l
-from models.resnet import resnet18
+from models.resnet import resnet18, resnet34, resnet50
 from models.bilstm import biLSTM512
 from models.caption import CaptionModel
 
@@ -91,6 +91,17 @@ def main(args):
                                 )])
             pretrained_resnet = True
             finetune_encoder = True
+	elif args.encoder == 'resnet34':
+            encoder = resnet34(pretrained=False, finetune=True)
+            resnet_transform = None
+            pretrained_resnet = False
+            finetune_encoder = True
+	elif args.encoder == 'resnet50':
+            encoder = resnet50(pretrained=False, finetune=True)
+            resnet_transform = None
+            pretrained_resnet = False
+            finetune_encoder = True
+
         decoder = biLSTM512(vocab_size=vocab_size, device=DEVICE)
         model = CaptionModel(encoder, decoder)
         start_epoch = 0
@@ -390,7 +401,7 @@ if __name__ == '__main__':
     parser.add_argument('--n_epochs', type=int, default=5)
     parser.add_argument('--grad_clip', type=float, default=5.)
     parser.add_argument('--prerotated', default=False, action='store_true')
-    parser.add_argument('--encoder', choices=['resnet', 'resnet_frozen', 'resnet_finetune', 'axials', 'axialsrpe'],
+    parser.add_argument('--encoder', choices=['resnet', 'resnet_frozen', 'resnet_finetune', 'resnet34', 'resnet50', 'axials', 'axialsrpe'],
                         default='axialsrpe')
     parser.add_argument('--make_grad_gif', default=False, action='store_true')
 
