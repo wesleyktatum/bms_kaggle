@@ -14,6 +14,7 @@ from models.sasa import ResNet26, ResNet38, ResNet50
 from models.axial import axial18s, axial18srpe, axial26s, axial50s, axial50m, axial50l
 from models.resnet import resnet18, resnet34, resnet50
 from models.bilstm import biLSTM512
+from models.transformer import trans128_4x, trans256_4x
 from models.caption import CaptionModel
 
 import torch
@@ -101,6 +102,13 @@ def main(args):
             resnet_transform = None
             pretrained_resnet = False
             finetune_encoder = True
+
+        if args.decoder == 'bilstm':
+            decoder = biLSTM512(vocab_size=vocab_size, device=DEVICE)
+        elif args.decoder == 'trans128_4x':
+            decoder = trans128_4x(vocab_size=vocab_size)
+        elif args.decoder == 'trans256_4x':
+            decoder = trans256_4x(vocab_size=vocab_size)
 
         decoder = biLSTM512(vocab_size=vocab_size, device=DEVICE)
         model = CaptionModel(encoder, decoder)
@@ -333,7 +341,7 @@ def validate(val_loader, model, epoch, args, batch_counter=0):
                 encoded_inchis = batch_encoded_inchis[j*args.chunk_size:(j+1)*args.chunk_size,:]
                 inchi_lengths = batch_inchi_lengths[j*args.chunk_size:(j+1)*args.chunk_size,:]
 
-                preds, encoded_inchis, decode_lengths, alphas, sort_ind = model(imgs, encoded_inchis, inchi_lengths)
+                preds, encoded_inchis, decode_lengths = model(imgs, encoded_inchis, inchi_lengths)
 
                 targets = encoded_inchis[:,1:]
 
@@ -403,6 +411,8 @@ if __name__ == '__main__':
     parser.add_argument('--prerotated', default=False, action='store_true')
     parser.add_argument('--encoder', choices=['resnet18', 'resnet18_frozen', 'resnet18_finetune',
                         'resnet34', 'resnet50', 'axials', 'axialsrpe'], default='axialsrpe')
+    parser.add_argument('--decoder', choices=['bilstm', 'trans128_4x', 'trans256_4x'],
+                        defalt='trans128_4x')
     parser.add_argument('--make_grad_gif', default=False, action='store_true')
 
     args = parser.parse_args()

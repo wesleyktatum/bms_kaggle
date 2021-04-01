@@ -15,10 +15,10 @@ class CaptionModel(nn.Module):
         # stop = perf_counter()
         # encoder_time = stop - start
         # start = perf_counter()
-        preds, encoded_inchis, decode_lengths, alphas, sort_ind = self.decoder(x, encoded_inchis, inchi_lengths)
+        preds, encoded_inchis, decode_lengths = self.decoder(x, encoded_inchis, inchi_lengths)
         # stop = perf_counter()
         # decoder_time = stop - start
         # log_file = open('logs/log_captionmodel_time.txt', 'a')
         # log_file.write('{},{}\n'.format(encoder_time, decoder_time))
         # log_file.close()
-        return preds, encoded_inchis, decode_lengths, alphas, sort_ind
+        return preds, encoded_inchis, decode_lengths

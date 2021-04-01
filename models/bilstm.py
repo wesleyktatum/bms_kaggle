@@ -98,7 +98,7 @@ class biLSTM(nn.Module):
             predictions[:batch_size_t, t, :] = preds
             alphas[:batch_size_t, t, :] = alpha
 
-        return predictions, encoded_inchis, decode_lengths, alphas, sort_ind
+        return predictions, encoded_inchis, decode_lengths
 
 def biLSTM512(vocab_size, device, d=512):
     model = biLSTM(attention_dim=256, embed_dim=256, decoder_dim=d,
