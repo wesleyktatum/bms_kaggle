@@ -69,29 +69,20 @@ def main(args):
             resnet_transform = None
             pretrained_resnet = False
             finetune_encoder = True
-        elif args.encoder == 'resnet':
+        elif args.encoder == 'resnet18':
             encoder = resnet18(pretrained=False, finetune=True)
             resnet_transform = None
             pretrained_resnet = False
             finetune_encoder = True
-        elif args.encoder == 'resnet_frozen':
-            ckpt_fn = os.path.join(args.save_dir, 'resnet18.ckpt')
-            encoder = resnet18(pretrained=True, finetune=False, ckpt_fn=ckpt_fn)
-            resnet_transform = Compose([Normalize(
-                                mean=[0.485, 0.456, 0.406],
-                                std=[0.229, 0.224, 0.225]
-                                )])
-            pretrained_resnet = True
-            finetune_encoder = False
-        elif args.encoder == 'resnet_finetune':
-            ckpt_fn = os.path.join(args.save_dir, 'resnet18.ckpt')
-            encoder = resnet18(pretrained=True, finetune=True, ckpt_fn=ckpt_fn)
-            resnet_transform = Compose([Normalize(
-                                mean=[0.485, 0.456, 0.406],
-                                std=[0.229, 0.224, 0.225]
-                                )])
-            pretrained_resnet = True
-            finetune_encoder = True
+        # elif args.encoder == 'resnet_finetune':
+        #     ckpt_fn = os.path.join(args.save_dir, 'resnet18.ckpt')
+        #     encoder = resnet18(pretrained=True, finetune=True, ckpt_fn=ckpt_fn)
+        #     resnet_transform = Compose([Normalize(
+        #                         mean=[0.485, 0.456, 0.406],
+        #                         std=[0.229, 0.224, 0.225]
+        #                         )])
+        #     pretrained_resnet = True
+        #     finetune_encoder = True
         elif args.encoder == 'resnet34':
             encoder = resnet34(pretrained=False, finetune=True)
             resnet_transform = None
@@ -409,7 +400,7 @@ if __name__ == '__main__':
     parser.add_argument('--n_epochs', type=int, default=5)
     parser.add_argument('--grad_clip', type=float, default=5.)
     parser.add_argument('--prerotated', default=False, action='store_true')
-    parser.add_argument('--encoder', choices=['resnet18', 'resnet18_frozen', 'resnet18_finetune',
+    parser.add_argument('--encoder', choices=['resnet18', 'resnet18_finetune',
                         'resnet34', 'resnet50', 'axials', 'axialsrpe'], default='axialsrpe')
     parser.add_argument('--decoder', choices=['bilstm', 'trans128_4x', 'trans256_4x'],
                         default='trans128_4x')
