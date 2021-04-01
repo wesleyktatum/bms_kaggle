@@ -223,7 +223,7 @@ def train(train_loader, model, optimizers, epoch, args, batch_counter=0):
             # chunk_times.append(chunk_end - chunk_start)
 
             # model_forward_start = perf_counter()
-            preds, encoded_inchis, decode_lengths, alphas, sort_ind = model(imgs, encoded_inchis, inchi_lengths)
+            preds, encoded_inchis, decode_lengths = model(imgs, encoded_inchis, inchi_lengths)
             # model_forward_end = perf_counter()
             # model_forward_times.append(model_forward_end - model_forward_start)
 
