@@ -126,23 +126,23 @@ def main(args):
             del mol_train, train_loader
         train_loss = np.mean(train_losses)
 
-        # mode = 'val'
-        # val_shard_ids = np.random.choice(np.arange(n_val_shards), size=1,
-        #                                  replace=False)
-        # val_losses = []
-        # batch_counter = 0
-        # for shard_id in val_shard_ids:
-        #     val_train = MoleculeDataset(mode, shard_id, args.imgs_dir, args.img_size,
-        #                                 args.prerotated, args.rotate)
-        #     val_loader = torch.utils.data.DataLoader(val_train, batch_size=args.batch_size,
-        #                                              shuffle=True, num_workers=0,
-        #                                              pin_memory=False, drop_last=True)
-        #     val_loss, batch_counter = validate(val_loader, model, epoch, args,
-        #                                        batch_counter=batch_counter)
-        #     val_losses.append(val_loss)
-        #     del val_train, val_loader
-        # val_loss = np.mean(val_losses)
-        # print('Epoch - {} Train - {}, Val - {}'.format(epoch, train_loss, val_loss))
+        mode = 'val'
+        val_shard_ids = np.random.choice(np.arange(n_val_shards), size=1,
+                                         replace=False)
+        val_losses = []
+        batch_counter = 0
+        for shard_id in val_shard_ids:
+            val_train = MoleculeDataset(mode, shard_id, args.imgs_dir, args.img_size,
+                                        args.prerotated, args.rotate)
+            val_loader = torch.utils.data.DataLoader(val_train, batch_size=args.batch_size,
+                                                     shuffle=True, num_workers=0,
+                                                     pin_memory=False, drop_last=True)
+            val_loss, batch_counter = validate(val_loader, model, epoch, args,
+                                               batch_counter=batch_counter)
+            val_losses.append(val_loss)
+            del val_train, val_loader
+        val_loss = np.mean(val_losses)
+        print('Epoch - {} Train - {}, Val - {}'.format(epoch, train_loss, val_loss))
 
         encoder_scheduler.step()
         decoder_scheduler.step()
@@ -182,94 +182,91 @@ def train(train_loader, model, optimizers, epoch, args, batch_counter=0):
     # data_load_start = perf_counter()
 
     for i, (batch_imgs, batch_encoded_inchis, batch_inchi_lengths) in enumerate(train_loader):
-        if i > 1:
-            break
-        else:
-            # to_cuda_start = perf_counter()
-            batch_imgs = batch_imgs.to(DEVICE)
-            batch_encoded_inchis = batch_encoded_inchis.to(DEVICE)
-            batch_inchi_lengths = batch_inchi_lengths.unsqueeze(1).to(DEVICE)
-            # to_cuda_end = perf_counter()
-            # to_cuda_times.append(to_cuda_end - to_cuda_start)
-            # data_load_end = perf_counter()
-            # data_load_times.append(data_load_end - data_load_start)
-            avg_losses = []
-            for j in range(args.batch_chunks):
-                # chunk_start = perf_counter()
-                imgs = batch_imgs[j*args.chunk_size:(j+1)*args.chunk_size,:,:,:]
-                encoded_inchis = batch_encoded_inchis[j*args.chunk_size:(j+1)*args.chunk_size,:]
-                inchi_lengths = batch_inchi_lengths[j*args.chunk_size:(j+1)*args.chunk_size,:]
-                # chunk_end = perf_counter()
-                # chunk_times.append(chunk_end - chunk_start)
+        # to_cuda_start = perf_counter()
+        batch_imgs = batch_imgs.to(DEVICE)
+        batch_encoded_inchis = batch_encoded_inchis.to(DEVICE)
+        batch_inchi_lengths = batch_inchi_lengths.unsqueeze(1).to(DEVICE)
+        # to_cuda_end = perf_counter()
+        # to_cuda_times.append(to_cuda_end - to_cuda_start)
+        # data_load_end = perf_counter()
+        # data_load_times.append(data_load_end - data_load_start)
+        avg_losses = []
+        for j in range(args.batch_chunks):
+            # chunk_start = perf_counter()
+            imgs = batch_imgs[j*args.chunk_size:(j+1)*args.chunk_size,:,:,:]
+            encoded_inchis = batch_encoded_inchis[j*args.chunk_size:(j+1)*args.chunk_size,:]
+            inchi_lengths = batch_inchi_lengths[j*args.chunk_size:(j+1)*args.chunk_size,:]
+            # chunk_end = perf_counter()
+            # chunk_times.append(chunk_end - chunk_start)
 
-                # model_forward_start = perf_counter()
-                preds, encoded_inchis, decode_lengths = model(imgs, encoded_inchis, inchi_lengths)
-                # model_forward_end = perf_counter()
-                # model_forward_times.append(model_forward_end - model_forward_start)
+            # model_forward_start = perf_counter()
+            preds, encoded_inchis, decode_lengths = model(imgs, encoded_inchis, inchi_lengths)
+            # model_forward_end = perf_counter()
+            # model_forward_times.append(model_forward_end - model_forward_start)
 
-                # postprocess_start = perf_counter()
-                targets = encoded_inchis[:,1:]
+            # postprocess_start = perf_counter()
+            targets = encoded_inchis[:,1:]
 
-                preds = pack_padded_sequence(preds, decode_lengths, batch_first=True).data
-                targets = pack_padded_sequence(targets, decode_lengths, batch_first=True).data
-                # postprocess_end = perf_counter()
-                # postprocess_times.append(postprocess_end - postprocess_start)
+            preds = pack_padded_sequence(preds, decode_lengths, batch_first=True).data
+            targets = pack_padded_sequence(targets, decode_lengths, batch_first=True).data
+            # postprocess_end = perf_counter()
+            # postprocess_times.append(postprocess_end - postprocess_start)
 
-                # calc_loss_start = perf_counter()
-                loss = ce_loss(targets, preds, args.char_weights)
-                loss /= args.batch_chunks
-                # calc_loss_end = perf_counter()
-                # calc_loss_times.append(calc_loss_end - calc_loss_start)
+            # calc_loss_start = perf_counter()
+            loss = ce_loss(targets, preds, args.char_weights)
+            loss /= args.batch_chunks
+            # calc_loss_end = perf_counter()
+            # calc_loss_times.append(calc_loss_end - calc_loss_start)
 
-                # backprop_start = perf_counter()
-                loss.backward()
-                # backprop_end = perf_counter()
-                # backprop_times.append(backprop_end - backprop_start)
+            # backprop_start = perf_counter()
+            loss.backward()
+            # backprop_end = perf_counter()
+            # backprop_times.append(backprop_end - backprop_start)
 
-                avg_losses.append(loss.item())
+            avg_losses.append(loss.item())
 
-            if args.grad_clip is not None:
-                clip_gradient(optimizer, args.grad_clip)
+        if args.grad_clip is not None:
+            clip_gradient(optimizer, args.grad_clip)
 
-            encoder_grad_norm = torch.nn.utils.clip_grad_norm_(model.encoder.parameters(), args.grad_clip)
-            decoder_grad_norm = torch.nn.utils.clip_grad_norm_(model.decoder.parameters(), args.grad_clip)
+        encoder_grad_norm = torch.nn.utils.clip_grad_norm_(model.encoder.parameters(), args.grad_clip)
+        decoder_grad_norm = torch.nn.utils.clip_grad_norm_(model.decoder.parameters(), args.grad_clip)
 
-            if args.make_grad_gif:
-                grads = plot_grad_flow(model.named_parameters())
-                grads.savefig('{}_gif/{}_{}.png'.format(args.model_name, epoch, batch_counter))
-                grads.close()
-                args.images.append(imageio.imread('{}_gif/{}_{}.png'.format(args.model_name, epoch, batch_counter)))
+        if args.make_grad_gif:
+            grads = plot_grad_flow(model.named_parameters())
+            grads.savefig('{}_gif/{}_{}.png'.format(args.model_name, epoch, batch_counter))
+            grads.close()
+            args.images.append(imageio.imread('{}_gif/{}_{}.png'.format(args.model_name, epoch, batch_counter)))
 
-            # optimizer_start = perf_counter()
-            for optimizer in optimizers:
-                optimizer.step()
-                optimizer.zero_grad()
-            # optimizer_end = perf_counter()
-            # optimizer_times.append(optimizer_end - optimizer_start)
-            ############################
+        # optimizer_start = perf_counter()
+        for optimizer in optimizers:
+            optimizer.step()
+            optimizer.zero_grad()
+        # optimizer_end = perf_counter()
+        # optimizer_times.append(optimizer_end - optimizer_start)
+        ############################
 
-            stop_time = perf_counter()
-            batch_time = round(stop_time - start_time, 5)
-            avg_loss = round(np.mean(avg_losses), 5)
-            losses.append(avg_loss)
-            batch_counter += 1
+        stop_time = perf_counter()
+        batch_time = round(stop_time - start_time, 5)
+        avg_loss = round(np.mean(avg_losses), 5)
+        losses.append(avg_loss)
+        batch_counter += 1
 
-            # Log
-            # write_log_start = perf_counter()
-            log_file = open(args.log_fn, 'a')
-            log_file.write('{},{},{},{},{},{},{}\n'.format(epoch,
-                                                     batch_counter,
-                                                     'train',
-                                                     avg_loss,
-                                                     encoder_grad_norm,
-                                                     decoder_grad_norm,
-                                                     batch_time))
-            log_file.close()
-            # write_log_end = perf_counter()
-            # write_log_times.append(write_log_end - write_log_start)
+        # Log
+        # write_log_start = perf_counter()
+        log_file = open(args.log_fn, 'a')
+        log_file.write('{},{},{},{},{},{},{}\n'.format(epoch,
+                                                 batch_counter,
+                                                 'train',
+                                                 avg_loss,
+                                                 encoder_grad_norm,
+                                                 decoder_grad_norm,
+                                                 batch_time))
+        log_file.close()
+        # write_log_end = perf_counter()
+        # write_log_times.append(write_log_end - write_log_start)
 
-            start_time = perf_counter()
-            # data_load_start = perf_counter()
+        start_time = perf_counter()
+        # data_load_start = perf_counter()
 
     train_loss = np.mean(losses)
     # data_load_time = np.mean(data_load_times)
