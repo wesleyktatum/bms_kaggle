@@ -256,11 +256,11 @@ def attention(query, key, value, mask=None, dropout=None):
         p_attn = dropout(p_attn)
     return torch.matmul(p_attn, value), p_attn
 
-def trans128_4x(vocab_size):
-    return Transformer(N=3, d_dec=128, d_ff=512, vocab_size=vocab_size)
+def trans128_4x(vocab_size, N=3):
+    return Transformer(N=N, d_dec=128, d_ff=512, vocab_size=vocab_size)
 
-def trans256_4x(vocab_size):
-    return Transformer(N=3, d_dec=256, d_ff=1024, vocab_size=vocab_size)
+def trans256_4x(vocab_size, N=3):
+    return Transformer(N=N, d_dec=256, d_ff=1024, vocab_size=vocab_size)
 
-def trans512_4x(vocab_size):
-    return Transformer(N=3, d_dec=512, d_ff=2048, vocab_size=vocab_size)
+def trans512_4x(vocab_size, N=3):
+    return Transformer(N=N, d_dec=512, d_ff=2048, vocab_size=vocab_size)
