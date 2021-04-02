@@ -28,12 +28,11 @@ DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 def main(args):
     if args.checkpoint_fn is not None:
-        ckpt, args = load_model_from_ckpt(args.checkpoint_fn)
-        start_epoch = args.epoch
+        ckpt, args, start_epoch = load_model_from_ckpt(args.checkpoint_fn)
     else:
         ckpt = None
         start_epoch = 0
-        
+
     train_dir = os.path.join(args.imgs_dir, 'train_shards')
     val_dir = os.path.join(args.imgs_dir, 'val_shards')
     with open('{}/char_dict.json'.format(args.data_dir), 'r') as f:
