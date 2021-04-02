@@ -405,6 +405,7 @@ if __name__ == '__main__':
                         'resnet34', 'resnet50', 'axials', 'axialsrpe'], default='axialsrpe')
     parser.add_argument('--decoder', choices=['bilstm', 'trans128_4x', 'trans256_4x', 'trans512_4x'],
                         default='trans128_4x')
+    parser.add_argument('--n_decoder_layers', type=int, default=3)
     parser.add_argument('--make_grad_gif', default=False, action='store_true')
 
     args = parser.parse_args()
