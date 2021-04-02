@@ -83,6 +83,9 @@ def main(args):
     elif args.decoder == 'trans512_4x':
         decoder = trans512_4x(vocab_size=vocab_size, d_enc=d_enc, N=args.n_decoder_layers)
     model = CaptionModel(encoder, decoder)
+    if ckpt is not None:
+        model.load_state_dict(ckpt['model_state_dict'])
+    model = model.to(DEVICE)
 
     encoder_optimizer = torch.optim.Adam(params=encoder.parameters(), lr=args.encoder_lr,
                                          weight_decay=1e-6)
@@ -94,14 +97,13 @@ def main(args):
                                           last_epoch=-1)
 
     if ckpt is not None:
-        model.load_state_dict(ckpt['model_state_dict'])
         encoder_optimizer.load_state_dict(ckpt['enc_optimizer_state_dict'])
         encoder_scheduler.load_state_dict(ckpt['enc_scheduler_state_dict'])
         decoder_optimizer.load_state_dict(ckpt['dec_optimizer_state_dict'])
         decoder_scheduler.load_state_dict(ckpt['dec_scheduler_state_dict'])
     optimizers = [encoder_optimizer, decoder_optimizer]
     schedulers = [encoder_scheduler, decoder_scheduler]
-    model = model.to(DEVICE)
+
 
     n_train_shards = get_n_shards(train_dir)
     n_val_shards = get_n_shards(val_dir)
