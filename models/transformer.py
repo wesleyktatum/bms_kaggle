@@ -261,3 +261,6 @@ def trans128_4x(vocab_size):
 
 def trans256_4x(vocab_size):
     return Transformer(N=3, d_dec=256, d_ff=1024, vocab_size=vocab_size)
+
+def trans512_4x(vocab_size):
+    return Transformer(N=3, d_dec=512, d_ff=2048, vocab_size=vocab_size)

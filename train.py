@@ -14,7 +14,7 @@ from models.sasa import ResNet26, ResNet38, ResNet50
 from models.axial import axial18s, axial18srpe, axial26s, axial50s, axial50m, axial50l
 from models.resnet import resnet18, resnet34, resnet50
 from models.bilstm import biLSTM512
-from models.transformer import trans128_4x, trans256_4x
+from models.transformer import trans128_4x, trans256_4x, trans512_4x
 from models.caption import CaptionModel
 
 import torch
@@ -100,6 +100,8 @@ def main(args):
             decoder = trans128_4x(vocab_size=vocab_size)
         elif args.decoder == 'trans256_4x':
             decoder = trans256_4x(vocab_size=vocab_size)
+        elif args.decoder == 'trans512_4x':
+            decoder = trans512_4x(vocab_size=vocab_size)
 
         model = CaptionModel(encoder, decoder)
         start_epoch = 0
@@ -401,7 +403,7 @@ if __name__ == '__main__':
     parser.add_argument('--prerotated', default=False, action='store_true')
     parser.add_argument('--encoder', choices=['resnet18', 'resnet18_finetune',
                         'resnet34', 'resnet50', 'axials', 'axialsrpe'], default='axialsrpe')
-    parser.add_argument('--decoder', choices=['bilstm', 'trans128_4x', 'trans256_4x'],
+    parser.add_argument('--decoder', choices=['bilstm', 'trans128_4x', 'trans256_4x', 'trans512_4x'],
                         default='trans128_4x')
     parser.add_argument('--make_grad_gif', default=False, action='store_true')
 
