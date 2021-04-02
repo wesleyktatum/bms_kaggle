@@ -142,7 +142,8 @@ def get_model_parameters(model):
 
 def load_model_from_ckpt(ckpt_fn):
     ckpt = torch.load(ckpt_fn, map_location=torch.device('cpu'))
-    return ckpt
+    args = ckpt['args']
+    return ckpt, args
 
 ########################################################
 ############# IMAGE TRANSFORM FUNCTIONS ################

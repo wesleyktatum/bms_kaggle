@@ -27,6 +27,13 @@ from torchvision.transforms import Compose, Normalize
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 def main(args):
+    if args.checkpoint_fn is not None:
+        ckpt, args = load_model_from_ckpt(args.checkpoint_fn)
+        start_epoch = args.epoch
+    else:
+        ckpt = None
+        start_epoch = 0
+        
     train_dir = os.path.join(args.imgs_dir, 'train_shards')
     val_dir = os.path.join(args.imgs_dir, 'val_shards')
     with open('{}/char_dict.json'.format(args.data_dir), 'r') as f:
@@ -55,60 +62,47 @@ def main(args):
     if not already_wrote:
         log_file.write('epoch,batch_idx,data_type,loss,enc_grad_norm,dec_grad_norm,run_time\n')
     log_file.close()
-
-    if args.checkpoint_fn is not None:
-        pass
-    else:
-        if args.encoder == 'resnet18':
-            encoder = resnet18(pretrained=False, finetune=True)
-            resnet_transform = None
-            pretrained_resnet = False
-            finetune_encoder = True
-            d_enc = 512
-        elif args.encoder == 'resnet34':
-            encoder = resnet34(pretrained=False, finetune=True)
-            resnet_transform = None
-            pretrained_resnet = False
-            finetune_encoder = True
-            d_enc = 512
-        elif args.encoder == 'resnet50':
-            encoder = resnet50(pretrained=False, finetune=True)
-            resnet_transform = None
-            pretrained_resnet = False
-            finetune_encoder = True
-            d_enc = 2048
-
-        if args.decoder == 'bilstm':
-            decoder = biLSTM512(vocab_size=vocab_size, device=DEVICE, d_enc=d_enc)
-        elif args.decoder == 'trans128_4x':
-            decoder = trans128_4x(vocab_size=vocab_size, d_enc=d_enc, N=args.n_decoder_layers)
-        elif args.decoder == 'trans256_4x':
-            decoder = trans256_4x(vocab_size=vocab_size, d_enc=d_enc, N=args.n_decoder_layers)
-        elif args.decoder == 'trans512_4x':
-            decoder = trans512_4x(vocab_size=vocab_size, d_enc=d_enc, N=args.n_decoder_layers)
-
-        model = CaptionModel(encoder, decoder)
-        start_epoch = 0
-
     if args.make_grad_gif:
         os.makedirs('{}_gif'.format(args.model_name), exist_ok=True)
         args.images = []
 
-    model = model.to(DEVICE)
-    if finetune_encoder:
-        encoder_optimizer = torch.optim.Adam(params=encoder.parameters(), lr=args.encoder_lr,
-                                             weight_decay=1e-6)
-        encoder_scheduler = CosineAnnealingLR(encoder_optimizer, T_max=4, eta_min=1e-6,
-                                              last_epoch=-1)
-    else:
-        encoder_optimizer = None
-        encoder_scheduler = None
+    if args.encoder == 'resnet18':
+        encoder = resnet18(pretrained=False, finetune=True)
+        d_enc = 512
+    elif args.encoder == 'resnet34':
+        encoder = resnet34(pretrained=False, finetune=True)
+        d_enc = 512
+    elif args.encoder == 'resnet50':
+        encoder = resnet50(pretrained=False, finetune=True)
+        d_enc = 2048
+    if args.decoder == 'bilstm':
+        decoder = biLSTM512(vocab_size=vocab_size, device=DEVICE, d_enc=d_enc)
+    elif args.decoder == 'trans128_4x':
+        decoder = trans128_4x(vocab_size=vocab_size, d_enc=d_enc, N=args.n_decoder_layers)
+    elif args.decoder == 'trans256_4x':
+        decoder = trans256_4x(vocab_size=vocab_size, d_enc=d_enc, N=args.n_decoder_layers)
+    elif args.decoder == 'trans512_4x':
+        decoder = trans512_4x(vocab_size=vocab_size, d_enc=d_enc, N=args.n_decoder_layers)
+    model = CaptionModel(encoder, decoder)
+
+    encoder_optimizer = torch.optim.Adam(params=encoder.parameters(), lr=args.encoder_lr,
+                                         weight_decay=1e-6)
+    encoder_scheduler = CosineAnnealingLR(encoder_optimizer, T_max=4, eta_min=1e-6,
+                                          last_epoch=-1)
     decoder_optimizer = torch.optim.Adam(params=decoder.parameters(), lr=args.decoder_lr,
                                          weight_decay=1e-6)
     decoder_scheduler = CosineAnnealingLR(decoder_optimizer, T_max=4, eta_min=1e-6,
                                           last_epoch=-1)
+
+    if ckpt is not None:
+        model.load_state_dict(ckpt['model_state_dict'])
+        encoder_optimizer.load_state_dict(ckpt['enc_optimizer_state_dict'])
+        encoder_scheduler.load_state_dict(ckpt['enc_scheduler_state_dict'])
+        decoder_optimizer.load_state_dict(ckpt['dec_optimizer_state_dict'])
+        decoder_scheduler.load_state_dict(ckpt['dec_scheduler_state_dict'])
     optimizers = [encoder_optimizer, decoder_optimizer]
     schedulers = [encoder_scheduler, decoder_scheduler]
+    model = model.to(DEVICE)
 
     n_train_shards = get_n_shards(train_dir)
     n_val_shards = get_n_shards(val_dir)
@@ -121,8 +115,7 @@ def main(args):
         batch_counter = 0
         for shard_id in train_shard_ids:
             mol_train = MoleculeDataset(mode, shard_id, args.imgs_dir, args.img_size,
-                                        args.prerotated, pretrained_resnet, resnet_transform,
-                                        args.rotate)
+                                        args.prerotated, args.rotate)
             train_loader = torch.utils.data.DataLoader(mol_train, batch_size=args.batch_size,
                                                        shuffle=True, num_workers=0,
                                                        pin_memory=False, drop_last=True)
@@ -139,8 +132,7 @@ def main(args):
         # batch_counter = 0
         # for shard_id in val_shard_ids:
         #     val_train = MoleculeDataset(mode, shard_id, args.imgs_dir, args.img_size,
-        #                                 args.prerotated, pretrained_resnet, resnet_transform,
-        #                                 args.rotate)
+        #                                 args.prerotated, args.rotate)
         #     val_loader = torch.utils.data.DataLoader(val_train, batch_size=args.batch_size,
         #                                              shuffle=True, num_workers=0,
         #                                              pin_memory=False, drop_last=True)
@@ -151,8 +143,7 @@ def main(args):
         # val_loss = np.mean(val_losses)
         # print('Epoch - {} Train - {}, Val - {}'.format(epoch, train_loss, val_loss))
 
-        if encoder_scheduler is not None:
-            encoder_scheduler.step()
+        encoder_scheduler.step()
         decoder_scheduler.step()
 
         if (epoch+1) % args.save_freq == 0:
@@ -173,8 +164,7 @@ def main(args):
 def train(train_loader, model, optimizers, epoch, args, batch_counter=0):
 
     for optimizer in optimizers:
-        if optimizer is not None:
-            optimizer.zero_grad()
+        optimizer.zero_grad()
     model.train()
     start_time = perf_counter()
     losses = []
@@ -251,11 +241,8 @@ def train(train_loader, model, optimizers, epoch, args, batch_counter=0):
 
             # optimizer_start = perf_counter()
             for optimizer in optimizers:
-                if optimizer is not None:
-                    optimizer.step()
-            for optimizer in optimizers:
-                if optimizer is not None:
-                    optimizer.zero_grad()
+                optimizer.step()
+                optimizer.zero_grad()
             # optimizer_end = perf_counter()
             # optimizer_times.append(optimizer_end - optimizer_start)
             ############################
@@ -357,21 +344,13 @@ def validate(val_loader, model, epoch, args, batch_counter=0):
 def save(model, optimizers, schedulers, args, epoch, save_fn):
     enc_optimizer, dec_optimizer = optimizers
     enc_scheduler, dec_scheduler = schedulers
-    if enc_optimizer is None:
-        enc_state_dict = None
-        enc_scheduler_dict = None
-    else:
-        enc_state_dict = enc_optimizer.state_dict()
-        enc_scheduler_dict = enc_scheduler.state_dict()
     save_state = {'epoch': epoch,
                   'model_state_dict': model.state_dict(),
-                  'enc_optimizer_state_dict': enc_state_dict,
+                  'enc_optimizer_state_dict': enc_optimizer.state_dict(),
                   'dec_optimizer_state_dict': dec_optimizer.state_dict(),
-                  'enc_scheduler_state_dict': enc_scheduler_dict,
+                  'enc_scheduler_state_dict': enc_scheduler.state_dict(),
                   'dec_scheduler_state_dict': dec_scheduler.state_dict(),
                   'args': args}
-    # for arg in vars(args):
-    #     save_state[arg] = getattr(args, arg)
     torch.save(save_state, save_fn)
 
 if __name__ == '__main__':

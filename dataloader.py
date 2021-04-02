@@ -19,7 +19,7 @@ class MoleculeDataset(Dataset):
     PyTorch Dataset class to load molecular images and InChIs
     """
     def __init__(self, mode, shard_id, source_dir, img_size, prerotated=False,
-                 pretrained_resnet=False, resnet_transform=None, rotate=True, p=0.5):
+                 rotate=True, p=0.5):
         self.mode = mode
         self.shard_id = shard_id
         if self.mode == 'train':
@@ -28,8 +28,6 @@ class MoleculeDataset(Dataset):
             self.shard_size = 25000
         self.img_size = img_size
         self.prerotated = prerotated
-        self.pretrained_resnet = pretrained_resnet
-        self.resnet_transform = resnet_transform
         if self.prerotated:
             self.rotate = False
         else:
@@ -54,10 +52,6 @@ class MoleculeDataset(Dataset):
         # stop = perf_counter()
         # cast_to_dense = stop - start
         img = torch.tensor(img)
-        if self.pretrained_resnet:
-            img = img[0,:,:]
-            img = img.repeat(3, 1, 1)
-            img = self.resnet_transform(img)
         if self.img_size != 256:
             img = img.unsqueeze(0)
             img = F.interpolate(img, size=(self.img_size, self.img_size))
