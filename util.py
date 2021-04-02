@@ -111,22 +111,14 @@ def accuracy(scores, targets, k):
     correct_total = correct.view(-1).float().sum()
     return correct_total.item() * (100.0 / batch_size)
 
-class AverageMeter(object):
-    def __init__(self):
-        self.reset()
-
-    def reset(self):
-        self.val = 0
-        self.avg = 0
-        self.sum = 0
-        self.count = 0
-
-    def update(self, val, n=1):
-        self.val = val
-        self.sum += val * n
-        self.count += n
-        self.avg = self.sum / self.count
-
+def get_model_parameters(model):
+    total_parameters = 0
+    for layer in list(model.parameters()):
+        layer_parameter = 1
+        for l in list(layer.size()):
+            layer_parameter *= l
+        total_parameters += layer_parameter
+    return total_parameters
 
 ########################################################
 ######## IMAGE TRANSFORM FUNCTIONS #####################

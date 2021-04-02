@@ -237,4 +237,4 @@ def resnet34(pretrained=False, finetune=True, progress=True, ckpt_fn=None, **kwa
 
 def resnet50(pretrained=False, finetune=True, progress=True, ckpt_fn=None, **kwargs):
 
-    return _resnet('resnet50', BasicBlock, [3, 4, 6, 3], pretrained, finetune, progress, ckpt_fn, **kwargs)
+    return _resnet('resnet50', Bottleneck, [3, 4, 6, 3], pretrained, finetune, progress, ckpt_fn, **kwargs)

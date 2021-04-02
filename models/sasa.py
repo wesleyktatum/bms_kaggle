@@ -320,13 +320,3 @@ def ResNet50(num_classes=1000, stem=False, parallel=False):
         return ModelParallel(Bottleneck, [3, 4, 6, 3], num_classes=num_classes, stem=stem)
     else:
         return Model(Bottleneck, [3, 4, 6, 3], num_classes=num_classes, stem=stem)
-
-
-def get_model_parameters(model):
-    total_parameters = 0
-    for layer in list(model.parameters()):
-        layer_parameter = 1
-        for l in list(layer.size()):
-            layer_parameter *= l
-        total_parameters += layer_parameter
-    return total_parameters
