@@ -100,7 +100,8 @@ class biLSTM(nn.Module):
 
         return predictions, encoded_inchis, decode_lengths
 
-def biLSTM512(vocab_size, device, d=512):
+def biLSTM512(vocab_size, device, d_enc=512, d=512):
     model = biLSTM(attention_dim=256, embed_dim=256, decoder_dim=d,
-                   vocab_size=vocab_size, device=device, dropout=0.5)
+                   vocab_size=vocab_size, device=device, encoder_dim=d_enc,
+                   dropout=0.5)
     return model

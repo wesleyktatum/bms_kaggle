@@ -59,49 +59,33 @@ def main(args):
     if args.checkpoint_fn is not None:
         pass
     else:
-        if args.encoder == 'axials':
-            encoder = axial18s(img_size=args.img_size)
-            resnet_transform = None
-            pretrained_resnet = False
-            finetune_encoder = True
-        elif args.encoder == 'axialsrpe':
-            encoder = axial18srpe(img_size=args.img_size)
-            resnet_transform = None
-            pretrained_resnet = False
-            finetune_encoder = True
-        elif args.encoder == 'resnet18':
+        if args.encoder == 'resnet18':
             encoder = resnet18(pretrained=False, finetune=True)
             resnet_transform = None
             pretrained_resnet = False
             finetune_encoder = True
-        # elif args.encoder == 'resnet_finetune':
-        #     ckpt_fn = os.path.join(args.save_dir, 'resnet18.ckpt')
-        #     encoder = resnet18(pretrained=True, finetune=True, ckpt_fn=ckpt_fn)
-        #     resnet_transform = Compose([Normalize(
-        #                         mean=[0.485, 0.456, 0.406],
-        #                         std=[0.229, 0.224, 0.225]
-        #                         )])
-        #     pretrained_resnet = True
-        #     finetune_encoder = True
+            d_enc = 512
         elif args.encoder == 'resnet34':
             encoder = resnet34(pretrained=False, finetune=True)
             resnet_transform = None
             pretrained_resnet = False
             finetune_encoder = True
+            d_enc = 512
         elif args.encoder == 'resnet50':
             encoder = resnet50(pretrained=False, finetune=True)
             resnet_transform = None
             pretrained_resnet = False
             finetune_encoder = True
+            d_enc = 2048
 
         if args.decoder == 'bilstm':
-            decoder = biLSTM512(vocab_size=vocab_size, device=DEVICE)
+            decoder = biLSTM512(vocab_size=vocab_size, device=DEVICE, d_enc=d_enc)
         elif args.decoder == 'trans128_4x':
-            decoder = trans128_4x(vocab_size=vocab_size)
+            decoder = trans128_4x(vocab_size=vocab_size, d_enc=d_enc, N=args.n_decoder_layers)
         elif args.decoder == 'trans256_4x':
-            decoder = trans256_4x(vocab_size=vocab_size)
+            decoder = trans256_4x(vocab_size=vocab_size, d_enc=d_enc, N=args.n_decoder_layers)
         elif args.decoder == 'trans512_4x':
-            decoder = trans512_4x(vocab_size=vocab_size)
+            decoder = trans512_4x(vocab_size=vocab_size, d_enc=d_enc, N=args.n_decoder_layers)
 
         model = CaptionModel(encoder, decoder)
         start_epoch = 0
@@ -401,8 +385,8 @@ if __name__ == '__main__':
     parser.add_argument('--n_epochs', type=int, default=5)
     parser.add_argument('--grad_clip', type=float, default=5.)
     parser.add_argument('--prerotated', default=False, action='store_true')
-    parser.add_argument('--encoder', choices=['resnet18', 'resnet18_finetune',
-                        'resnet34', 'resnet50', 'axials', 'axialsrpe'], default='axialsrpe')
+    parser.add_argument('--encoder', choices=['resnet18', 'resnet34', 'resnet50'],
+                        default='resnet18')
     parser.add_argument('--decoder', choices=['bilstm', 'trans128_4x', 'trans256_4x', 'trans512_4x'],
                         default='trans128_4x')
     parser.add_argument('--n_decoder_layers', type=int, default=3)
