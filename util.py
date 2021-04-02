@@ -8,6 +8,10 @@ import matplotlib.pyplot as plt
 from skimage import feature, filters, morphology
 from sklearn.preprocessing import MinMaxScaler, StandardScaler
 
+########################################################
+############# PROCESSING FUNCTIONS #####################
+########################################################
+
 def get_path_from_img_id(img_id, DIR):
     img_path = os.path.join(DIR, img_id[0], img_id[1], img_id[2], '{}.png'.format(img_id))
     return img_path
@@ -98,6 +102,10 @@ def get_char_weights(train_inchis, params, freq_penalty=0.5):
     char_weights = scaler.fit_transform(char_weights.reshape(-1, 1))
     return char_weights[:,0]
 
+########################################################
+################## MODEL FUNCTIONS #####################
+########################################################
+
 def clip_gradient(optimizer, grad_clip):
     for group in optimizer.param_groups:
         for param in group['params']:
@@ -120,8 +128,11 @@ def get_model_parameters(model):
         total_parameters += layer_parameter
     return total_parameters
 
+def load_model_from_ckpt(ckpt_fn, model, optimizers):
+    pass
+
 ########################################################
-######## IMAGE TRANSFORM FUNCTIONS #####################
+############# IMAGE TRANSFORM FUNCTIONS ################
 ########################################################
 
 def invert_and_normalize(img):

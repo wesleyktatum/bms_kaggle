@@ -108,6 +108,7 @@ def main(args):
     decoder_scheduler = CosineAnnealingLR(decoder_optimizer, T_max=4, eta_min=1e-6,
                                           last_epoch=-1)
     optimizers = [encoder_optimizer, decoder_optimizer]
+    schedulers = [encoder_scheduler, decoder_scheduler]
 
     n_train_shards = get_n_shards(train_dir)
     n_val_shards = get_n_shards(val_dir)
@@ -162,7 +163,7 @@ def main(args):
                 save_fn = os.path.join(args.save_dir, 'model_'+args.model_name+'_'+epoch_str+'.ckpt')
             else:
                 save_fn = os.path.join(args.save_dir, 'model_'+epoch_str+'.ckpt')
-            save(model, optimizers, args, epoch+1, save_fn)
+            save(model, optimizers, schedulers, args, epoch+1, save_fn)
 
     if args.make_grad_gif:
         imageio.mimsave('{}_grads.gif'.format(args.model_name), args.images)
@@ -350,16 +351,21 @@ def validate(val_loader, model, epoch, args, batch_counter=0):
     val_loss = np.mean(losses)
     return val_loss, batch_counter
 
-def save(model, optimizers, args, epoch, save_fn):
+def save(model, optimizers, schedulers, args, epoch, save_fn):
     enc_optimizer, dec_optimizer = optimizers
+    enc_scheduler, dec_scheduler = schedulers
     if enc_optimizer is None:
         enc_state_dict = None
+        enc_scheduler_dict = None
     else:
         enc_state_dict = enc_optimizer.state_dict()
+        enc_scheduler_dict = enc_scheduler.state_dict()
     save_state = {'epoch': epoch,
                   'model_state_dict': model.state_dict(),
                   'enc_optimizer_state_dict': enc_state_dict,
                   'dec_optimizer_state_dict': dec_optimizer.state_dict(),
+                  'enc_scheduler_state_dict': enc_scheduler_dict,
+                  'dec_scheduler_state_dict': dec_scheduler.state_dict(),
                   'args': {}}
     for arg in vars(args):
         save_state[arg] = getattr(args, arg)
