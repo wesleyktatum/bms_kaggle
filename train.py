@@ -101,7 +101,6 @@ def main(args):
         elif args.decoder == 'trans256_4x':
             decoder = trans256_4x(vocab_size=vocab_size)
 
-        decoder = biLSTM512(vocab_size=vocab_size, device=DEVICE)
         model = CaptionModel(encoder, decoder)
         start_epoch = 0
 
