@@ -161,7 +161,7 @@ def load_model_from_ckpt(ckpt_fn):
     return ckpt, args, start_epoch
 
 class MixScheduler:
-    def __init__(self, alpha_init, alpha_fin, step_rate=2.5e-3):
+    def __init__(self, alpha_init=1., alpha_fin=0., step_rate=2.5e-3):
         self.alpha = alpha_init
         self.alpha_init = alpha_init
         self.alpha_fin = alpha_fin
