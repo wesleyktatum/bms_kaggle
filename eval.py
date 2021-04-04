@@ -45,11 +45,14 @@ def main(args):
     if ckpt_args.decoder == 'bilstm':
         decoder = biLSTM512(vocab_size=vocab_size, device=DEVICE, d_enc=d_enc)
     elif ckpt_args.decoder == 'trans128_4x':
-        decoder = trans128_4x(vocab_size=vocab_size, d_enc=d_enc, N=ckpt_args.n_decoder_layers)
+        decoder = trans128_4x(vocab_size=vocab_size, d_enc=d_enc, N=ckpt_args.n_decoder_layers,
+                              device=DEVICE, teacher_force=False)
     elif ckpt_args.decoder == 'trans256_4x':
-        decoder = trans256_4x(vocab_size=vocab_size, d_enc=d_enc, N=ckpt_args.n_decoder_layers)
+        decoder = trans256_4x(vocab_size=vocab_size, d_enc=d_enc, N=ckpt_args.n_decoder_layers,
+                              device=DEVICE, teacher_force=False)
     elif ckpt_args.decoder == 'trans512_4x':
-        decoder = trans512_4x(vocab_size=vocab_size, d_enc=d_enc, N=ckpt_args.n_decoder_layers)
+        decoder = trans512_4x(vocab_size=vocab_size, d_enc=d_enc, N=ckpt_args.n_decoder_layers,
+                              device=DEVICE, teacher_force=False)
     model = CaptionModel(encoder, decoder)
     model.load_state_dict(ckpt['model_state_dict'])
     model = model.to(DEVICE)
