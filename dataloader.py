@@ -88,7 +88,7 @@ class MoleculeDataset(Dataset):
             # log_file.close()
             return img, encoded_inchi, inchi_length
         else:
-            return img, None, None
+            return img
 
     def __len__(self):
         return self.sparse_imgs.shape[0]
