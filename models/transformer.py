@@ -8,7 +8,8 @@ import torch.nn.functional as F
 from torch.autograd import Variable
 
 class Transformer(nn.Module):
-    def __init__(self, N, d_dec, d_ff, vocab_size, d_enc=512, dropout=0.1):
+    def __init__(self, N, d_dec, d_ff, vocab_size, device, d_enc=512, dropout=0.1,
+                 teacher_force=False):
         super().__init__()
         self.N = N
         self.d_dec = d_dec
@@ -16,6 +17,8 @@ class Transformer(nn.Module):
         self.vocab_size = vocab_size
         self.d_enc = d_enc
         self.dropout = dropout
+        self.teacher_force = teacher_force
+        self.device = device
         self.n_pix = 64
         self.tgt_length = 350
         self.pad_idx = self.vocab_size - 1
@@ -44,6 +47,7 @@ class Transformer(nn.Module):
         inchi_lengths, sort_ind = inchi_lengths.squeeze(1).sort(dim=0, descending=True)
         imgs = imgs[sort_ind]
         encoded_inchis = encoded_inchis[sort_ind]
+        decode_lengths = (inchi_lengths - 1).tolist()
 
         ### transform image for decoder
         imgs = imgs.contiguous().view(batch_size, self.n_pix, -1)
@@ -53,15 +57,26 @@ class Transformer(nn.Module):
         imgs = imgs.permute(0, 2, 1)
         imgs = self.pos_embed(imgs)
 
-        ### transform inchi for decoder
-        inchis = encoded_inchis[:,:-1]
-        inchi_mask = make_std_mask(inchis, self.pad_idx)
-        inchis = self.inchi_embed(inchis)
-        decode_lengths = (inchi_lengths - 1).tolist()
+        if self.teacher_force:
+            ### transform inchi for decoder
+            inchis = encoded_inchis[:,:-1]
+            inchi_mask = make_std_mask(inchis, self.pad_idx)
+            inchis = self.inchi_embed(inchis)
 
-        ### send through decoder and generate predictions
-        x = self.decoder(inchis, imgs, inchi_mask)
-        preds = self.generator(x)
+
+            ### send through decoder and generate predictions
+            x = self.decoder(inchis, imgs, inchi_mask)
+            preds = self.generator(x)
+        elif not self.teacher_force:
+            decoded = torch.ones(batch_size,1).fill_(self.sos_idx).long().to(self.device)
+            preds = torch.empty(batch_size, decode_lengths[0], self.vocab_size).to(self.device)
+            for i in range(decode_lengths[0]):
+                decoded_mask = Variable(subsequent_mask(decoded.size(1)).long()).to(self.device)
+                out = self.inchi_embed(decoded)
+                preds[:,i,:] = self.generator(self.decoder(Variable(out), imgs, decoded_mask)[:,i,:])
+                probs = F.softmax(preds[:,i,:], dim=-1)
+                _, next_word = torch.topk(probs, k=1)
+                decoded = torch.cat([decoded, next_word], dim=1)
         return preds, encoded_inchis, decode_lengths
 
     def predict(self, imgs, search_mode, width, device):
@@ -345,11 +360,11 @@ def attention(query, key, value, mask=None, dropout=None):
         p_attn = dropout(p_attn)
     return torch.matmul(p_attn, value), p_attn
 
-def trans128_4x(vocab_size, d_enc=512, N=3):
-    return Transformer(N=N, d_dec=128, d_ff=512, vocab_size=vocab_size, d_enc=d_enc)
+def trans128_4x(vocab_size, device, d_enc=512, N=3):
+    return Transformer(N=N, d_dec=128, d_ff=512, vocab_size=vocab_size, device=device, d_enc=d_enc)
 
-def trans256_4x(vocab_size, d_enc=512, N=3):
-    return Transformer(N=N, d_dec=256, d_ff=1024, vocab_size=vocab_size, d_enc=d_enc)
+def trans256_4x(vocab_size, device, d_enc=512, N=3):
+    return Transformer(N=N, d_dec=256, d_ff=1024, vocab_size=vocab_size, device=device, d_enc=d_enc)
 
-def trans512_4x(vocab_size, d_enc=512, N=3):
-    return Transformer(N=N, d_dec=512, d_ff=2048, vocab_size=vocab_size, d_enc=d_enc)
+def trans512_4x(vocab_size, device, d_enc=512, N=3):
+    return Transformer(N=N, d_dec=512, d_ff=2048, vocab_size=vocab_size, device=device, d_enc=d_enc)

@@ -28,10 +28,18 @@ DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 def main(args):
     if args.checkpoint_fn is not None:
+        pretrained = args.pretrained
+        model_name = args.model_name
+        tf = args.teacher_force
         ckpt, args, start_epoch = load_model_from_ckpt(args.checkpoint_fn)
+        if pretrained:
+            start_epoch = 0
+            args.best_val_loss = 1e5
+            args.model_name = model_name
     else:
         ckpt = None
         start_epoch = 0
+        args.best_val_loss = 1e5
 
     train_dir = os.path.join(args.imgs_dir, 'train_shards')
     val_dir = os.path.join(args.imgs_dir, 'val_shards')
@@ -77,11 +85,14 @@ def main(args):
     if args.decoder == 'bilstm':
         decoder = biLSTM512(vocab_size=vocab_size, device=DEVICE, d_enc=d_enc)
     elif args.decoder == 'trans128_4x':
-        decoder = trans128_4x(vocab_size=vocab_size, d_enc=d_enc, N=args.n_decoder_layers)
+        decoder = trans128_4x(vocab_size=vocab_size, d_enc=d_enc, device=DEVICE,
+                              N=args.n_decoder_layers, teacher_force=tf)
     elif args.decoder == 'trans256_4x':
-        decoder = trans256_4x(vocab_size=vocab_size, d_enc=d_enc, N=args.n_decoder_layers)
+        decoder = trans256_4x(vocab_size=vocab_size, d_enc=d_enc, device=DEVICE,
+                              N=args.n_decoder_layers, teacher_force=tf)
     elif args.decoder == 'trans512_4x':
-        decoder = trans512_4x(vocab_size=vocab_size, d_enc=d_enc, N=args.n_decoder_layers)
+        decoder = trans512_4x(vocab_size=vocab_size, d_enc=d_enc, device=DEVICE,
+                              N=args.n_decoder_layers, teacher_force=tf)
     model = CaptionModel(encoder, decoder)
     if ckpt is not None:
         model.load_state_dict(ckpt['model_state_dict'])
@@ -96,7 +107,7 @@ def main(args):
     decoder_scheduler = CosineAnnealingLR(decoder_optimizer, T_max=4, eta_min=1e-6,
                                           last_epoch=-1)
 
-    if ckpt is not None:
+    if ckpt is not None and not pretrained:
         encoder_optimizer.load_state_dict(ckpt['enc_optimizer_state_dict'])
         encoder_scheduler.load_state_dict(ckpt['enc_scheduler_state_dict'])
         decoder_optimizer.load_state_dict(ckpt['dec_optimizer_state_dict'])
@@ -157,6 +168,15 @@ def main(args):
                 save_fn = os.path.join(args.save_dir, 'model_'+epoch_str+'.ckpt')
             save(model, optimizers, schedulers, args, epoch+1, save_fn)
 
+        if args.save_best:
+            if val_loss < args.best_val_loss:
+                args.best_val_loss = val_loss
+                if args.model_name is not None:
+                    save_fn = os.path.join(args.save_dir, 'model_'+args.model_name+'_best.ckpt')
+                else:
+                    save_fn = os.path.join(args.save_dir, 'model_best.ckpt')
+                save(model, optimizers, schedulers, args, epoch+1, save_fn)
+
     if args.make_grad_gif:
         imageio.mimsave('{}_grads.gif'.format(args.model_name), args.images)
         shutil.rmtree('{}_gif'.format(args.model_name))
@@ -214,7 +234,6 @@ def train(train_loader, model, optimizers, epoch, args, batch_counter=0):
 
             # calc_loss_start = perf_counter()
             loss = ce_loss(targets, preds, args.char_weights)
-            loss /= args.batch_chunks
             # calc_loss_end = perf_counter()
             # calc_loss_times.append(calc_loss_end - calc_loss_start)
 
@@ -358,7 +377,10 @@ if __name__ == '__main__':
     parser.add_argument('--log_dir', type=str, default='logs')
     parser.add_argument('--save_dir', type=str, default='checkpoints')
     parser.add_argument('--save_freq', type=int, default=1)
+    parser.add_argument('--save_best', default=False, action='store_true')
     parser.add_argument('--checkpoint_fn', type=str, default=None)
+    parser.add_argument('--pretrained', default=False, action='store_true')
+    parser.add_argument('--continuation', default=False, action='store_true')
     parser.add_argument('--model_name', type=str, default=None)
     parser.add_argument('--max_inchi_length', type=int, default=350)
     parser.add_argument('--img_size', type=int, choices=[64, 128, 256],
@@ -375,6 +397,7 @@ if __name__ == '__main__':
                         default='resnet18')
     parser.add_argument('--decoder', choices=['bilstm', 'trans128_4x', 'trans256_4x', 'trans512_4x'],
                         default='trans128_4x')
+    parser.add_argument('--teacher_force', default=False, action='store_true')
     parser.add_argument('--n_decoder_layers', type=int, default=3)
     parser.add_argument('--make_grad_gif', default=False, action='store_true')
 
