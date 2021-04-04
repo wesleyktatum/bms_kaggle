@@ -79,6 +79,7 @@ class Transformer(nn.Module):
                 probs = F.softmax(preds[:,i,:], dim=-1)
                 _, next_word = torch.topk(probs, k=1)
                 decoded = torch.cat([decoded, next_word], dim=1)
+            print('\n')
         return preds, encoded_inchis, decode_lengths
 
     def predict(self, imgs, search_mode, width, device):
