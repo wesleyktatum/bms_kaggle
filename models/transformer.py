@@ -93,7 +93,7 @@ class Transformer(nn.Module):
                 freeze_idxs[i].append(j)
         for i in range(self.tgt_length-1):
             decoded = decoded.view(batch_size*width,-1)
-            decoded_mask = Variable(subsequent_mask(decoded.size(1)).long())
+            decoded_mask = Variable(subsequent_mask(decoded.size(1)).long()).to(device)
             out = self.inchi_embed(decoded)
             out = self.decoder(Variable(out), imgs, decoded_mask)
             probs = F.softmax(self.generator(out[:,i,:]), dim=-1).view(batch_size, width, -1)
@@ -104,7 +104,7 @@ class Transformer(nn.Module):
             col_idxs = sorted_idxs % width
             decoded = decoded.view(batch_size, width, -1)
             current_strings = decoded
-            next_words = torch.ones(batch_size,width,1).fill_(0).long()
+            next_words = torch.ones(batch_size,width,1).fill_(0).long().to(device)
             for batch_idx in range(batch_size):
                 batch_row_idxs = row_idxs[batch_idx,:,:]
                 batch_col_idxs = col_idxs[batch_idx,:,:]
