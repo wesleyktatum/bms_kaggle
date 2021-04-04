@@ -19,6 +19,8 @@ class Transformer(nn.Module):
         self.n_pix = 64
         self.tgt_length = 350
         self.pad_idx = self.vocab_size - 1
+        self.sos_idx = 57
+        self.eos_idx = 58
 
         c = copy.deepcopy
         self.attn = MultiHeadedAttention(h=8, d_dec=self.d_dec)
@@ -61,6 +63,94 @@ class Transformer(nn.Module):
         x = self.decoder(inchis, imgs, inchi_mask)
         preds = self.generator(x)
         return preds, encoded_inchis, decode_lengths
+
+    def predict(self, imgs, search_mode, width):
+        batch_size = imgs.shape[0]
+        if search_mode == 'greedy':
+            width = 1
+        else:
+            width = width
+
+        ### transform image for decoder
+        imgs = imgs.contiguous().view(batch_size, self.n_pix, -1)
+        imgs = F.relu(self.img_enc_to_dec(imgs))
+        imgs = imgs.permute(0, 2, 1)
+        imgs = F.relu(self.img_projection(imgs))
+        imgs = imgs.permute(0, 2, 1)
+        imgs = self.pos_embed(imgs)
+        imgs = imgs.unsqueeze(1).repeat(1, width, 1, 1).view(batch_size*width,
+                                                             imgs.shape[1],
+                                                             imgs.shape[2])
+
+        ### step through sequence to make predictions
+        decoded = torch.ones(batch_size,width,1).fill_(self.sos_idx).long()
+        cum_probs = torch.ones(batch_size,width,1).fill_(1.)
+        freeze = torch.zeros(batch_size,width,1)
+        freeze_idxs = []
+        for i in range(batch_size):
+            freeze_idxs.append([])
+            for j in range(width):
+                freeze_idxs[i].append(j)
+        for i in range(self.tgt_length-1):
+            print(i)
+            decoded = decoded.view(batch_size*width,-1)
+            decoded_mask = Variable(subsequent_mask(decoded.size(1)).long())
+            out = self.inchi_embed(decoded)
+            out = self.decoder(Variable(out), imgs, decoded_mask)
+            probs = F.softmax(self.generator(out[:,i,:]), dim=-1).view(batch_size, width, -1)
+            topk_probs, topk_idxs = torch.topk(probs, k=width)
+            cumk_probs = topk_probs * cum_probs
+            sorted_idxs = torch.argsort(cumk_probs.view(batch_size, width**2, -1), dim=1, descending=True)
+            row_idxs = sorted_idxs / width
+            col_idxs = sorted_idxs % width
+            decoded = decoded.view(batch_size, width, -1)
+            current_strings = decoded
+            next_words = torch.ones(batch_size,width,1).fill_(0).long()
+            for batch_idx in range(batch_size):
+                batch_row_idxs = row_idxs[batch_idx,:,:]
+                batch_col_idxs = col_idxs[batch_idx,:,:]
+                best_words = []
+                batch_freeze_idxs = copy.copy(freeze_idxs[batch_idx])
+                for w in range(width):
+                    if w not in batch_freeze_idxs:
+                        current_strings[batch_idx,w,:] = decoded[batch_idx,w,:]
+                        next_words[batch_idx,w,:] = self.pad_idx
+                ended_words = 0
+                if len(batch_freeze_idxs) == 0:
+                    pass
+                else:
+                    for k, (i, j) in enumerate(zip(batch_row_idxs, batch_col_idxs)):
+                        i = i.long().item()
+                        j = j.long().item()
+                        next_word = topk_idxs[batch_idx,i,j].item()
+                        full_word = decoded[batch_idx,i,:]
+                        str_word = ''
+                        for word in full_word:
+                            str_word += str(word.item())+','
+                        str_word += str(next_word)
+                        if str_word not in best_words:
+                            current_strings[batch_idx,batch_freeze_idxs[len(best_words)],:] = decoded[batch_idx,i,:]
+                            next_words[batch_idx,batch_freeze_idxs[len(best_words)],:] = topk_idxs[batch_idx,i,j].item()
+                            cum_probs[batch_idx,batch_freeze_idxs[len(best_words)],:] = cumk_probs[batch_idx,i,j].item()
+                            if next_word == self.eos_idx:
+                                freeze_id = freeze_idxs[batch_idx].pop(len(best_words)-ended_words)
+                                freeze[batch_idx,freeze_id,:] = 1
+                                ended_words += 1
+                            best_words.append(str_word)
+                            if len(best_words) == width - torch.sum(freeze[batch_idx,:,:]).long().item() + ended_words:
+                                break
+                        else:
+                            pass
+            decoded = torch.cat([current_strings, next_words], dim=-1)
+            if torch.sum(freeze.long()).item() == (batch_size*width):
+                break
+        top_idxs = torch.argmax(cum_probs, dim=1)
+        best_decoded = torch.empty(batch_size, decoded.shape[-1] - 1).long()
+        for i in range(batch_size):
+            best_decoded[i,:] = decoded[i,top_idxs[i].item(),1:]
+        return best_decoded
+
+
 
 ################### Decoder Layers ######################
 

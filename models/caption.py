@@ -9,9 +9,9 @@ class CaptionModel(nn.Module):
         self.encoder = encoder
         self.decoder = decoder
 
-    def forward(self, x, encoded_inchis, inchi_lengths):
+    def forward(self, img, encoded_inchis, inchi_lengths):
         # start = perf_counter()
-        x = self.encoder(x)
+        x = self.encoder(img)
         # stop = perf_counter()
         # encoder_time = stop - start
         # start = perf_counter()
@@ -22,3 +22,8 @@ class CaptionModel(nn.Module):
         # log_file.write('{},{}\n'.format(encoder_time, decoder_time))
         # log_file.close()
         return preds, encoded_inchis, decode_lengths
+
+    def predict(self, img, search_mode, width):
+        x = self.encoder(img)
+        preds = self.decoder.predict(x, search_mode, width)
+        return preds

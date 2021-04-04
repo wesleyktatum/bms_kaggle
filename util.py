@@ -89,6 +89,20 @@ def encode_inchi(inchi, max_len, char_dict):
     inchi_vec = [char_dict[c] for c in inchi]
     return inchi_vec
 
+def decode_inchi(preds, ord_dict, probs=False):
+    if probs:
+        preds = F.softmax(preds, dim=-1)
+        preds = torch.argmax(preds, dim=-1).squeeze(0).numpy()
+    else:
+        preds = preds.numpy()
+    inchi = 'InChI=1S/'
+    for idx in preds:
+        tok = ord_dict[str(idx)]
+        if tok == '<eos>':
+            return inchi
+        inchi += tok
+    return inchi
+
 def get_char_weights(train_inchis, params, freq_penalty=0.5):
     "Calculates token weights for a set of input data"
     char_dist = {}
