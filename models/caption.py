@@ -9,13 +9,13 @@ class CaptionModel(nn.Module):
         self.encoder = encoder
         self.decoder = decoder
 
-    def forward(self, img, encoded_inchis, inchi_lengths):
+    def forward(self, img, encoded_inchis, inchi_lengths, mix_scheduler=None):
         # start = perf_counter()
         x = self.encoder(img)
         # stop = perf_counter()
         # encoder_time = stop - start
         # start = perf_counter()
-        preds, encoded_inchis, decode_lengths = self.decoder(x, encoded_inchis, inchi_lengths)
+        preds, encoded_inchis, decode_lengths = self.decoder(x, encoded_inchis, inchi_lengths, mix_scheduler)
         # stop = perf_counter()
         # decoder_time = stop - start
         # log_file = open('logs/log_captionmodel_time.txt', 'a')

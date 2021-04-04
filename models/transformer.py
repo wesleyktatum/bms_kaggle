@@ -40,7 +40,7 @@ class Transformer(nn.Module):
             if p.dim() > 1:
                 nn.init.xavier_uniform_(p)
 
-    def forward(self, imgs, encoded_inchis, inchi_lengths):
+    def forward(self, imgs, encoded_inchis, inchi_lengths, mix_scheduler=None):
         batch_size = imgs.shape[0]
 
         ### sort input data in decreasing order
@@ -49,7 +49,7 @@ class Transformer(nn.Module):
         encoded_inchis = encoded_inchis[sort_ind]
         decode_lengths = (inchi_lengths - 1).tolist()
 
-        ### transform image for decoder
+        ### transform images for decoder
         imgs = imgs.contiguous().view(batch_size, self.n_pix, -1)
         imgs = F.relu(self.img_enc_to_dec(imgs))
         imgs = imgs.permute(0, 2, 1)
@@ -57,30 +57,43 @@ class Transformer(nn.Module):
         imgs = imgs.permute(0, 2, 1)
         imgs = self.pos_embed(imgs)
 
-        if self.teacher_force:
-            ### transform inchi for decoder
-            inchis = encoded_inchis[:,:-1]
-            inchi_mask = make_std_mask(inchis, self.pad_idx)
-            inchis = self.inchi_embed(inchis)
+        ### transform inchis for decoder
+        inchis = encoded_inchis[:,:-1]
+        inchi_mask = make_std_mask(inchis, self.pad_idx)
 
+        if self.teacher_force:
+            ### embed inchis
+            inchis = self.inchi_embed(inchis)
 
             ### send through decoder and generate predictions
             x = self.decoder(inchis, imgs, inchi_mask)
             preds = self.generator(x)
         elif not self.teacher_force:
-            decoded = torch.ones(batch_size,1).fill_(self.sos_idx).long().to(self.device)
-            preds = torch.empty(batch_size, decode_lengths[0], self.vocab_size).to(self.device)
-            for i in range(decode_lengths[0]):
-                print(i)
-                decoded_mask = Variable(subsequent_mask(decoded.size(1)).long()).to(self.device)
-                out = self.inchi_embed(decoded)
-                out = self.decoder(Variable(out), imgs, decoded_mask)
-                preds[:,i,:] = self.generator(out[:,i,:])
-                probs = F.softmax(preds[:,i,:], dim=-1)
-                _, next_word = torch.topk(probs, k=1)
-                decoded = torch.cat([decoded, next_word], dim=1)
-            print('\n')
+            alpha_mix = mix_scheduler.get_alpha()
+            preds = self.two_pass_mixed_predict(imgs, inchis, inchi_mask, alpha_mix)
+
         return preds, encoded_inchis, decode_lengths
+
+    def two_pass_mixed_predict(self, embedded_imgs, inchis, inchi_mask, alpha_mix):
+        ### embed true inchi
+        true_inchis = self.inchi_embed(inchis)
+
+        ### get teacher-forced model prediction
+        tf_inchis = torch.empty((embedded_imgs.shape[0], self.tgt_length-1)).fill_(self.sos_idx).long().to(self.device)
+        x = self.decoder(true_inchis, embedded_imgs, inchi_mask)
+        tf_preds = self.generator(x).detach()
+        tf_preds = F.softmax(tf_preds, dim=-1)
+        tf_seq = torch.argmax(tf_preds, dim=-1)
+        tf_inchis[:,1:] = tf_seq[:,:-1]
+
+        ### embed teacher-forced prediction and take mean of embeddings
+        tf_inchis = self.inchi_embed(tf_inchis)
+        mixed_inchis = alpha_mix * true_inchis + (1 - alpha_mix) * tf_inchis
+
+        ### send through decoder and generate predictions
+        x = self.decoder(mixed_inchis, embedded_imgs, inchi_mask)
+        preds = self.generator(x)
+        return preds
 
     def predict(self, imgs, search_mode, width, device):
         batch_size = imgs.shape[0]

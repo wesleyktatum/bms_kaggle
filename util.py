@@ -160,6 +160,21 @@ def load_model_from_ckpt(ckpt_fn):
     start_epoch = ckpt['epoch']
     return ckpt, args, start_epoch
 
+class MixScheduler:
+    def __init__(self, alpha_init, alpha_fin, step_rate=2.5e-3):
+        self.alpha = alpha_init
+        self.alpha_init = alpha_init
+        self.alpha_fin = alpha_fin
+        self.step_rate = step_rate
+
+    def step(self):
+        self.alpha -= ((self.alpha_init - self.alpha_fin) * (self.step_rate / 100))
+        if self.alpha <= 0.:
+            self.alpha = 0.
+
+    def get_alpha(self):
+        return self.alpha
+
 ########################################################
 ############# IMAGE TRANSFORM FUNCTIONS ################
 ########################################################
