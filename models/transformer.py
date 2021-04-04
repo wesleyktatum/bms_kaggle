@@ -71,9 +71,11 @@ class Transformer(nn.Module):
             decoded = torch.ones(batch_size,1).fill_(self.sos_idx).long().to(self.device)
             preds = torch.empty(batch_size, decode_lengths[0], self.vocab_size).to(self.device)
             for i in range(decode_lengths[0]):
+                print(i)
                 decoded_mask = Variable(subsequent_mask(decoded.size(1)).long()).to(self.device)
                 out = self.inchi_embed(decoded)
-                preds[:,i,:] = self.generator(self.decoder(Variable(out), imgs, decoded_mask)[:,i,:])
+                out = self.decoder(Variable(out), imgs, decoded_mask)
+                preds[:,i,:] = self.generator(out[:,i,:])
                 probs = F.softmax(preds[:,i,:], dim=-1)
                 _, next_word = torch.topk(probs, k=1)
                 decoded = torch.cat([decoded, next_word], dim=1)
