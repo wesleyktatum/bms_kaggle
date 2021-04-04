@@ -89,6 +89,7 @@ class Transformer(nn.Module):
         ### embed teacher-forced prediction and take mean of embeddings
         tf_inchis = self.inchi_embed(tf_inchis)
         mixed_inchis = alpha_mix * true_inchis + (1 - alpha_mix) * tf_inchis
+        del true_inchis, tf_inchis, tf_preds, tf_seq
 
         ### send through decoder and generate predictions
         x = self.decoder(mixed_inchis, embedded_imgs, inchi_mask)
