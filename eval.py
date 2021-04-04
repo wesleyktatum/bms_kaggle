@@ -63,8 +63,9 @@ def main(args):
         log_file.close()
 
     if args.write_predictions:
+        img_ids = pd.read_csv(os.path.join(args.data_dir, '{}.csv'.format(args.mode))).image_id.values
         log_file = open(write_fn, 'a')
-        log_file.write('pred_inchi,true_inchi,lev_dist\n')
+        log_file.write('image_id,pred_inchi,true_inchi,lev_dist\n')
         log_file.close()
 
 
@@ -106,6 +107,7 @@ def main(args):
                 batch_lev_dists = []
                 for j in range(args.batch_chunks):
                     imgs = batch_imgs[j*args.chunk_size:(j+1)*args.chunk_size,:,:,:]
+                    img_id_idx = shard_id*mol_data.shard_size+i*args.batch_size+j*args.chunk_size
                     encoded_inchis = batch_encoded_inchis[j*args.chunk_size:(j+1)*args.chunk_size,:]
 
                     decoded = model.predict(imgs, search_mode=args.search_mode, width=args.beam_width,
@@ -116,8 +118,9 @@ def main(args):
                         lev_dist = lev.distance(pred_inchi, true_inchi)
                         batch_lev_dists.append(lev_dist)
                         if args.write_predictions:
+                            img_id = img_ids[img_id_idx+k]
                             log_file = open(write_fn, 'a')
-                            log_file.write('{},{},{}\n'.format(pred_inchi, true_inchi, lev_dist))
+                            log_file.write('{},{},{},{}\n'.format(img_id, pred_inchi, true_inchi, lev_dist))
                             log_file.close()
                 lev_dists.append(np.mean(batch_lev_dists))
 
