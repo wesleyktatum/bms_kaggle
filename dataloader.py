@@ -22,9 +22,9 @@ class MoleculeDataset(Dataset):
                  rotate=True, p=0.5):
         self.mode = mode
         self.shard_id = shard_id
-        if self.mode == 'train':
+        if self.mode == 'train' or self.mode == 'eval':
             self.shard_size = 200000
-        elif self.mode == 'val':
+        elif self.mode == 'val' or self.mode == 'test':
             self.shard_size = 25000
         self.img_size = img_size
         self.prerotated = prerotated
