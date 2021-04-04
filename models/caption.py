@@ -25,5 +25,5 @@ class CaptionModel(nn.Module):
 
     def predict(self, img, search_mode, width, device):
         x = self.encoder(img)
-        preds = self.decoder.predict(x, search_mode, width)
+        preds = self.decoder.predict(x, search_mode, width, device)
         return preds
