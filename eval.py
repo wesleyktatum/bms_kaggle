@@ -65,7 +65,7 @@ def main(args):
     if args.write_predictions:
         img_ids = pd.read_csv(os.path.join(args.data_dir, '{}.csv'.format(args.mode))).image_id.values
         log_file = open(write_fn, 'a')
-        log_file.write('image_id,pred_inchi,true_inchi,lev_dist\n')
+        log_file.write('image_id\tpred_inchi\ttrue_inchi\tlev_dist\n')
         log_file.close()
 
 
@@ -120,7 +120,7 @@ def main(args):
                         if args.write_predictions:
                             img_id = img_ids[img_id_idx+k]
                             log_file = open(write_fn, 'a')
-                            log_file.write('{},{},{},{}\n'.format(img_id, pred_inchi, true_inchi, lev_dist))
+                            log_file.write('{}\t{}\t{}\t{}\n'.format(img_id, pred_inchi, true_inchi, lev_dist))
                             log_file.close()
                 lev_dists.append(np.mean(batch_lev_dists))
 
