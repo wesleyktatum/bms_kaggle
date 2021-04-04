@@ -38,8 +38,10 @@ class MoleculeDataset(Dataset):
         else:
             self.sparse_path = os.path.join(source_dir, '{}_shards'.format(self.mode), 'shard{}.npz'.format(shard_id))
         self.sparse_imgs = sparse.load_npz(self.sparse_path)
-        self.inchi_path = os.path.join(source_dir, '{}_shards'.format(self.mode), 'encoded_inchis.npy')
-        self.encoded_inchis = np.load(self.inchi_path)
+
+        if mode != 'eval':
+            self.inchi_path = os.path.join(source_dir, '{}_shards'.format(self.mode), 'encoded_inchis.npy')
+            self.encoded_inchis = np.load(self.inchi_path)
 
     def __getitem__(self, i):
         ### grab image
@@ -73,17 +75,20 @@ class MoleculeDataset(Dataset):
         # rotate_img = stop - start
 
         ### grab inchi
-        # start = perf_counter()
-        inchi_idx = i + (self.shard_size*self.shard_id)
-        inchi_data = torch.tensor(self.encoded_inchis[inchi_idx]).long()
-        encoded_inchi = inchi_data[:-1]
-        inchi_length = inchi_data[-1]
-        # stop = perf_counter()
-        # grab_inchi = stop - start
-        # log_file = open('logs/log_dataloader_times.txt', 'a')
-        # log_file.write('{},{},{},{}\n'.format(grab_sparse_img, cast_to_dense, rotate_img, grab_inchi))
-        # log_file.close()
-        return img, encoded_inchi, inchi_length
+        if self.mode != 'eval':
+            # start = perf_counter()
+            inchi_idx = i + (self.shard_size*self.shard_id)
+            inchi_data = torch.tensor(self.encoded_inchis[inchi_idx]).long()
+            encoded_inchi = inchi_data[:-1]
+            inchi_length = inchi_data[-1]
+            # stop = perf_counter()
+            # grab_inchi = stop - start
+            # log_file = open('logs/log_dataloader_times.txt', 'a')
+            # log_file.write('{},{},{},{}\n'.format(grab_sparse_img, cast_to_dense, rotate_img, grab_inchi))
+            # log_file.close()
+            return img, encoded_inchi, inchi_length
+        else:
+            return img, _, _
 
     def __len__(self):
         return self.sparse_imgs.shape[0]

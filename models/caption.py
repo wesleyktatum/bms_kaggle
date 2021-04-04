@@ -23,7 +23,7 @@ class CaptionModel(nn.Module):
         # log_file.close()
         return preds, encoded_inchis, decode_lengths
 
-    def predict(self, img, search_mode, width):
+    def predict(self, img, search_mode, width, device):
         x = self.encoder(img)
         preds = self.decoder.predict(x, search_mode, width)
         return preds

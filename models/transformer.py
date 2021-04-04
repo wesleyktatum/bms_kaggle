@@ -64,7 +64,7 @@ class Transformer(nn.Module):
         preds = self.generator(x)
         return preds, encoded_inchis, decode_lengths
 
-    def predict(self, imgs, search_mode, width):
+    def predict(self, imgs, search_mode, width, device):
         batch_size = imgs.shape[0]
         if search_mode == 'greedy':
             width = 1
@@ -83,9 +83,9 @@ class Transformer(nn.Module):
                                                              imgs.shape[2])
 
         ### step through sequence to make predictions
-        decoded = torch.ones(batch_size,width,1).fill_(self.sos_idx).long()
-        cum_probs = torch.ones(batch_size,width,1).fill_(1.)
-        freeze = torch.zeros(batch_size,width,1)
+        decoded = torch.ones(batch_size,width,1).fill_(self.sos_idx).long().to(device)
+        cum_probs = torch.ones(batch_size,width,1).fill_(1.).to(device)
+        freeze = torch.zeros(batch_size,width,1).to(device)
         freeze_idxs = []
         for i in range(batch_size):
             freeze_idxs.append([])

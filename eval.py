@@ -74,7 +74,8 @@ def main(args):
                 batch_imgs = batch_imgs.to(DEVICE)
                 for j in range(args.batch_chunks):
                     imgs = batch_imgs[j*args.chunk_size:(j+1)*args.chunk_size,:,:,:]
-                    decoded = model.predict(imgs, search_mode=args.search_mode, width=args.beam_width)
+                    decoded = model.predict(imgs, search_mode=args.search_mode, width=args.beam_width,
+                                            device=DEVICE).cpu()
                     for k in range(args.chunk_size):
                         pred_inchi = decode_inchi(decoded[k,:], ord_dict)
                         log_file = open(write_fn, 'a')
@@ -88,13 +89,14 @@ def main(args):
                                                       pin_memory=False, drop_last=False)
             for i, (batch_imgs, batch_encoded_inchis, _) in enumerate(data_loader):
                 batch_imgs = batch_imgs.to(DEVICE)
-                batch_encoded_inchis = batch_encoded_inchis.to(DEVICE)
+                batch_encoded_inchis = batch_encoded_inchis
                 batch_lev_dists = []
                 for j in range(args.batch_chunks):
                     imgs = batch_imgs[j*args.chunk_size:(j+1)*args.chunk_size,:,:,:]
                     encoded_inchis = batch_encoded_inchis[j*args.chunk_size:(j+1)*args.chunk_size,:]
 
-                    decoded = model.predict(imgs, search_mode=args.search_mode, width=args.beam_width)
+                    decoded = model.predict(imgs, search_mode=args.search_mode, width=args.beam_width,
+                                            device=DEVICE).cpu()
                     for k in range(args.chunk_size):
                         pred_inchi = decode_inchi(decoded[k,:], ord_dict)
                         true_inchi = decode_inchi(encoded_inchis[k,1:], ord_dict)
