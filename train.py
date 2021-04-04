@@ -31,6 +31,7 @@ def main(args):
         pretrained = args.pretrained
         model_name = args.model_name
         tf = args.teacher_force
+        freeze_encoder = args.freeze_encoder
         ckpt, args, start_epoch = load_model_from_ckpt(args.checkpoint_fn)
         if pretrained:
             start_epoch = 0
@@ -96,6 +97,9 @@ def main(args):
     model = CaptionModel(encoder, decoder)
     if ckpt is not None:
         model.load_state_dict(ckpt['model_state_dict'])
+    if freeze_encoder:
+        for param in model.encoder.parameters():
+            param.requires_grad = False
     model = model.to(DEVICE)
 
     encoder_optimizer = torch.optim.Adam(params=encoder.parameters(), lr=args.encoder_lr,
@@ -398,6 +402,7 @@ if __name__ == '__main__':
     parser.add_argument('--decoder', choices=['bilstm', 'trans128_4x', 'trans256_4x', 'trans512_4x'],
                         default='trans128_4x')
     parser.add_argument('--teacher_force', default=False, action='store_true')
+    parser.add_argument('--freeze_encoder', default=False, action='store_true')
     parser.add_argument('--n_decoder_layers', type=int, default=3)
     parser.add_argument('--make_grad_gif', default=False, action='store_true')
 
