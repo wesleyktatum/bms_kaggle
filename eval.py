@@ -55,10 +55,13 @@ def main(args):
     model = model.to(DEVICE)
     model.eval()
 
+    if args.mode == 'eval':
+        img_ids = pd.read_csv(os.path.join(args.imgs_dir, 'sample_submission.csv')).image_id.values
+
     if args.mode == 'eval' or args.write_predictions:
         write_fn = os.path.join(args.eval_dir, '{}_{}_predictions.txt'.format(ckpt_args.model_name, n_epochs))
         log_file = open(write_fn, 'a')
-        log_file.write('predicted_inchi\n')
+        log_file.write('image_id,InChI\n')
         log_file.close()
 
     n_shards = get_n_shards(shards_dir)
@@ -78,12 +81,14 @@ def main(args):
                 batch_imgs = batch_imgs.to(DEVICE)
                 for j in range(args.batch_chunks):
                     imgs = batch_imgs[j*args.chunk_size:(j+1)*args.chunk_size,:,:,:]
+                    img_id_idx = shard_id*mol_data.shard_size+i*args.batch_size+j*args.chunk_size
                     decoded = model.predict(imgs, search_mode=args.search_mode, width=args.beam_width,
                                             device=DEVICE).cpu()
                     for k in range(args.chunk_size):
                         pred_inchi = decode_inchi(decoded[k,:], ord_dict)
+                        img_id = img_ids[img_id_idx+k]
                         log_file = open(write_fn, 'a')
-                        log_file.write('{}\n'.format(pred_inchi))
+                        log_file.write('{},{}\n'.format(img_id, pred_inchi))
                         log_file.close()
         else:
             mol_data = MoleculeDataset(args.mode, shard_id, args.imgs_dir, ckpt_args.img_size,
