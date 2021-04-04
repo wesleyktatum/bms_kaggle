@@ -55,14 +55,18 @@ def main(args):
     model = model.to(DEVICE)
     model.eval()
 
+    write_fn = os.path.join(args.eval_dir, '{}_{}_{}_predictions.txt'.format(ckpt_args.model_name, n_epochs, args.mode))
     if args.mode == 'eval':
         img_ids = pd.read_csv(os.path.join(args.imgs_dir, 'sample_submission.csv')).image_id.values
-
-    if args.mode == 'eval' or args.write_predictions:
-        write_fn = os.path.join(args.eval_dir, '{}_{}_predictions.txt'.format(ckpt_args.model_name, n_epochs))
         log_file = open(write_fn, 'a')
         log_file.write('image_id,InChI\n')
         log_file.close()
+
+    if args.write_predictions:
+        log_file = open(write_fn, 'a')
+        log_file.write('pred_inchi,true_inchi,lev_dist\n')
+        log_file.close()
+
 
     n_shards = get_n_shards(shards_dir)
 
@@ -113,7 +117,7 @@ def main(args):
                         batch_lev_dists.append(lev_dist)
                         if args.write_predictions:
                             log_file = open(write_fn, 'a')
-                            log_file.write('{}\n'.format(pred_inchi))
+                            log_file.write('{},{},{}\n'.format(pred_inchi, true_inchi, lev_dist))
                             log_file.close()
                 lev_dists.append(np.mean(batch_lev_dists))
 
