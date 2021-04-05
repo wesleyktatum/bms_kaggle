@@ -373,12 +373,20 @@ def validate(val_loader, model, epoch, args, batch_counter=0):
 def save(model, optimizers, schedulers, args, epoch, save_fn):
     enc_optimizer, dec_optimizer = optimizers
     enc_scheduler, dec_scheduler = schedulers
+    if enc_scheduler is None:
+        enc_scheduler_state_dict = None
+    else:
+        enc_scheduler_state_dict = enc_scheduler.state_dict()
+    if dec_scheduler is None:
+        dec_scheduler_state_dict = None
+    else:
+        dec_scheduler_state_dict = dec_scheduler.state_dict()
     save_state = {'epoch': epoch,
                   'model_state_dict': model.state_dict(),
                   'enc_optimizer_state_dict': enc_optimizer.state_dict(),
                   'dec_optimizer_state_dict': dec_optimizer.state_dict(),
-                  'enc_scheduler_state_dict': enc_scheduler.state_dict(),
-                  'dec_scheduler_state_dict': dec_scheduler.state_dict(),
+                  'enc_scheduler_state_dict': enc_scheduler_state_dict,
+                  'dec_scheduler_state_dict': dec_scheduler_state_dict,
                   'args': args}
     torch.save(save_state, save_fn)
 
