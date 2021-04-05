@@ -79,22 +79,26 @@ class Transformer(nn.Module):
         true_inchis = self.inchi_embed(inchis)
 
         ### get teacher-forced model prediction
-        with torch.no_grad():
-            tf_inchis = torch.empty((embedded_imgs.shape[0], self.tgt_length-1)).fill_(self.sos_idx).long().to(self.device)
-            x = self.decoder(true_inchis, embedded_imgs, inchi_mask)
-            tf_preds = self.generator(x).detach()
-            tf_preds = F.softmax(tf_preds, dim=-1)
-            tf_seq = torch.argmax(tf_preds, dim=-1)
-            tf_inchis[:,1:] = tf_seq[:,:-1]
+        if alpha_mix == 1.:
+            x= self.decoder(true_inchis, embedded_imgs, inchi_mask)
+            preds = self.generator(x)
+        else:
+            with torch.no_grad():
+                tf_inchis = torch.empty((embedded_imgs.shape[0], self.tgt_length-1)).fill_(self.sos_idx).long().to(self.device)
+                x = self.decoder(true_inchis, embedded_imgs, inchi_mask)
+                tf_preds = self.generator(x).detach()
+                tf_preds = F.softmax(tf_preds, dim=-1)
+                tf_seq = torch.argmax(tf_preds, dim=-1)
+                tf_inchis[:,1:] = tf_seq[:,:-1]
 
-            ### embed teacher-forced prediction and take mean of embeddings
-            tf_inchis = self.inchi_embed(tf_inchis)
-            mixed_inchis = alpha_mix * true_inchis + (1 - alpha_mix) * tf_inchis
-            del true_inchis, tf_inchis, tf_preds, tf_seq
+                ### embed teacher-forced prediction and take mean of embeddings
+                tf_inchis = self.inchi_embed(tf_inchis)
+                mixed_inchis = alpha_mix * true_inchis + (1 - alpha_mix) * tf_inchis
+                del true_inchis, tf_inchis, tf_preds, tf_seq
 
-        ### send through decoder and generate predictions
-        x = self.decoder(mixed_inchis, embedded_imgs, inchi_mask)
-        preds = self.generator(x)
+            ### send through decoder and generate predictions
+            x = self.decoder(mixed_inchis, embedded_imgs, inchi_mask)
+            preds = self.generator(x)
         return preds
 
     def predict(self, imgs, search_mode, width, device):

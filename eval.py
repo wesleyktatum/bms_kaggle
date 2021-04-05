@@ -75,6 +75,7 @@ def main(args):
     n_shards = get_n_shards(shards_dir)
 
     lev_dists = []
+    n_evaluated = 0
     for shard_id in range(n_shards):
         if args.mode == 'eval':
             if shard_id > 0:
@@ -99,6 +100,8 @@ def main(args):
                         log_file.write('{},{}\n'.format(img_id, pred_inchi))
                         log_file.close()
         else:
+            if shard_id > 0:
+                break
             mol_data = MoleculeDataset(args.mode, shard_id, args.imgs_dir, ckpt_args.img_size,
                                        ckpt_args.prerotated, ckpt_args.rotate)
             data_loader = torch.utils.data.DataLoader(mol_data, batch_size=args.batch_size,
@@ -125,6 +128,9 @@ def main(args):
                             log_file = open(write_fn, 'a')
                             log_file.write('{}\t{}\t{}\t{}\n'.format(img_id, pred_inchi, true_inchi, lev_dist))
                             log_file.close()
+                n_evaluated += args.batch_size
+                if n_evaluated > args.n_samples:
+                    break
                 lev_dists.append(np.mean(batch_lev_dists))
 
 
@@ -146,6 +152,7 @@ if __name__ == '__main__':
     parser.add_argument('--write_predictions', default=False, action='store_true')
     parser.add_argument('--batch_size', type=int, default=256)
     parser.add_argument('--batch_chunks', type=int, default=8)
+    parser.add_argument('--n_samples', type=int, default=10000)
 
     args = parser.parse_args()
     main(args)
