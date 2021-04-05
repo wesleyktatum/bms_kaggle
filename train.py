@@ -98,18 +98,23 @@ def main(args):
 
     encoder_optimizer = torch.optim.Adam(params=encoder.parameters(), lr=args.encoder_lr,
                                          weight_decay=1e-6)
-    encoder_scheduler = CosineAnnealingLR(encoder_optimizer, T_max=4, eta_min=1e-6,
-                                          last_epoch=-1)
     decoder_optimizer = torch.optim.Adam(params=decoder.parameters(), lr=args.decoder_lr,
                                          weight_decay=1e-6)
-    decoder_scheduler = CosineAnnealingLR(decoder_optimizer, T_max=4, eta_min=1e-6,
-                                          last_epoch=-1)
+    if args.scheduler == 'cosine_annealing':
+        encoder_scheduler = CosineAnnealingLR(encoder_optimizer, T_max=4, eta_min=1e-6,
+                                              last_epoch=-1)
+        decoder_scheduler = CosineAnnealingLR(decoder_optimizer, T_max=4, eta_min=1e-6,
+                                              last_epoch=-1)
+    else:
+        encoder_scheduler = None
+        decoder_scheduler = None
 
     if ckpt is not None and not args.pretrained:
         encoder_optimizer.load_state_dict(ckpt['enc_optimizer_state_dict'])
-        encoder_scheduler.load_state_dict(ckpt['enc_scheduler_state_dict'])
         decoder_optimizer.load_state_dict(ckpt['dec_optimizer_state_dict'])
-        decoder_scheduler.load_state_dict(ckpt['dec_scheduler_state_dict'])
+        if args.scheduler != 'none':
+            encoder_scheduler.load_state_dict(ckpt['enc_scheduler_state_dict'])
+            decoder_scheduler.load_state_dict(ckpt['dec_scheduler_state_dict'])
     optimizers = [encoder_optimizer, decoder_optimizer]
     schedulers = [encoder_scheduler, decoder_scheduler]
 
@@ -124,7 +129,7 @@ def main(args):
 
     for epoch in range(start_epoch, start_epoch+args.n_epochs):
         mode = 'train'
-        train_shard_ids = np.random.choice(np.arange(n_train_shards), size=n_train_shards,
+        train_shard_ids = np.random.choice(np.arange(n_train_shards), size=1,
                                            replace=False)
         train_losses = []
         batch_counter = 0
@@ -141,7 +146,7 @@ def main(args):
         train_loss = np.mean(train_losses)
 
         mode = 'val'
-        val_shard_ids = np.random.choice(np.arange(n_val_shards), size=n_val_shards,
+        val_shard_ids = np.random.choice(np.arange(n_val_shards), size=1,
                                          replace=False)
         val_losses = []
         batch_counter = 0
@@ -158,8 +163,9 @@ def main(args):
         val_loss = np.mean(val_losses)
         print('Epoch - {} Train - {}, Val - {}'.format(epoch, train_loss, val_loss))
 
-        encoder_scheduler.step()
-        decoder_scheduler.step()
+        if args.scheduler != 'none':
+            encoder_scheduler.step()
+            decoder_scheduler.step()
 
         if (epoch+1) % args.save_freq == 0:
             epoch_str = str(epoch+1)
@@ -403,6 +409,8 @@ if __name__ == '__main__':
                         default='resnet18')
     parser.add_argument('--decoder', choices=['bilstm', 'trans128_4x', 'trans256_4x', 'trans512_4x'],
                         default='trans128_4x')
+    parser.add_argument('--scheduler', choices=['cosine_annealing', 'none'],
+                        default='cosine_annealing')
     parser.add_argument('--teacher_force', default=False, action='store_true')
     parser.add_argument('--mix_warmup', type=int, default=35000)
     parser.add_argument('--n_decoder_layers', type=int, default=3)
