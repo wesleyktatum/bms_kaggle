@@ -114,7 +114,7 @@ def main(args):
     schedulers = [encoder_scheduler, decoder_scheduler]
 
     if not args.teacher_force:
-        args.mix_scheduler = MixScheduler()
+        args.mix_scheduler = MixScheduler(warmup_steps=args.mix_warmup)
     else:
         args.mix_scheduler = None
 
@@ -404,6 +404,7 @@ if __name__ == '__main__':
     parser.add_argument('--decoder', choices=['bilstm', 'trans128_4x', 'trans256_4x', 'trans512_4x'],
                         default='trans128_4x')
     parser.add_argument('--teacher_force', default=False, action='store_true')
+    parser.add_argument('--mix_warmup', type=int, default=35000)
     parser.add_argument('--n_decoder_layers', type=int, default=3)
     parser.add_argument('--make_grad_gif', default=False, action='store_true')
 
