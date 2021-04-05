@@ -105,7 +105,7 @@ def main(args):
     decoder_scheduler = CosineAnnealingLR(decoder_optimizer, T_max=4, eta_min=1e-6,
                                           last_epoch=-1)
 
-    if ckpt is not None and not pretrained:
+    if ckpt is not None and not args.pretrained:
         encoder_optimizer.load_state_dict(ckpt['enc_optimizer_state_dict'])
         encoder_scheduler.load_state_dict(ckpt['enc_scheduler_state_dict'])
         decoder_optimizer.load_state_dict(ckpt['dec_optimizer_state_dict'])
