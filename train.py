@@ -124,7 +124,7 @@ def main(args):
 
     for epoch in range(start_epoch, start_epoch+args.n_epochs):
         mode = 'train'
-        train_shard_ids = np.random.choice(np.arange(n_train_shards), size=1,
+        train_shard_ids = np.random.choice(np.arange(n_train_shards), size=n_train_shards,
                                            replace=False)
         train_losses = []
         batch_counter = 0
@@ -141,7 +141,7 @@ def main(args):
         train_loss = np.mean(train_losses)
 
         mode = 'val'
-        val_shard_ids = np.random.choice(np.arange(n_val_shards), size=1,
+        val_shard_ids = np.random.choice(np.arange(n_val_shards), size=n_val_shards,
                                          replace=False)
         val_losses = []
         batch_counter = 0
