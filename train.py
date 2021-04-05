@@ -28,14 +28,12 @@ DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 def main(args):
     if args.checkpoint_fn is not None:
-        pretrained = args.pretrained
-        model_name = args.model_name
-        tf = args.teacher_force
-        ckpt, args, start_epoch = load_model_from_ckpt(args.checkpoint_fn)
-        if pretrained:
+        if args.pretrained:
+            ckpt, _, _ = load_model_from_ckpt(args.checkpoint_fn)
             start_epoch = 0
             args.best_val_loss = 1e5
-            args.model_name = model_name
+        elif args.continuation:
+            ckpt, args, start_epoch = load_model_from_ckpt(args.checkpoint_fn)
     else:
         ckpt = None
         start_epoch = 0
@@ -86,13 +84,13 @@ def main(args):
         decoder = biLSTM512(vocab_size=vocab_size, device=DEVICE, d_enc=d_enc)
     elif args.decoder == 'trans128_4x':
         decoder = trans128_4x(vocab_size=vocab_size, d_enc=d_enc, device=DEVICE,
-                              N=args.n_decoder_layers, teacher_force=tf)
+                              N=args.n_decoder_layers, teacher_force=args.teacher_force)
     elif args.decoder == 'trans256_4x':
         decoder = trans256_4x(vocab_size=vocab_size, d_enc=d_enc, device=DEVICE,
-                              N=args.n_decoder_layers, teacher_force=tf)
+                              N=args.n_decoder_layers, teacher_force=args.teacher_force)
     elif args.decoder == 'trans512_4x':
         decoder = trans512_4x(vocab_size=vocab_size, d_enc=d_enc, device=DEVICE,
-                              N=args.n_decoder_layers, teacher_force=tf)
+                              N=args.n_decoder_layers, teacher_force=args.teacher_force)
     model = CaptionModel(encoder, decoder)
     if ckpt is not None:
         model.load_state_dict(ckpt['model_state_dict'])
@@ -115,7 +113,7 @@ def main(args):
     optimizers = [encoder_optimizer, decoder_optimizer]
     schedulers = [encoder_scheduler, decoder_scheduler]
 
-    if not tf:
+    if not args.teacher_force:
         args.mix_scheduler = MixScheduler()
     else:
         args.mix_scheduler = None
@@ -126,7 +124,7 @@ def main(args):
 
     for epoch in range(start_epoch, start_epoch+args.n_epochs):
         mode = 'train'
-        train_shard_ids = np.random.choice(np.arange(n_train_shards), size=n_train_shards,
+        train_shard_ids = np.random.choice(np.arange(n_train_shards), size=1,
                                            replace=False)
         train_losses = []
         batch_counter = 0
@@ -143,7 +141,7 @@ def main(args):
         train_loss = np.mean(train_losses)
 
         mode = 'val'
-        val_shard_ids = np.random.choice(np.arange(n_val_shards), size=n_val_shards,
+        val_shard_ids = np.random.choice(np.arange(n_val_shards), size=1,
                                          replace=False)
         val_losses = []
         batch_counter = 0
