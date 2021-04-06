@@ -154,13 +154,11 @@ def validate(val_loader, model, args, ord_dict):
     with torch.no_grad():
         for i, (batch_imgs, batch_encoded_inchis, batch_inchi_lengths) in enumerate(val_loader):
             batch_imgs = batch_imgs.to(DEVICE)
-            batch_encoded_inchis = batch_encoded_inchis.to(DEVICE)
-            batch_inchi_lengths = batch_inchi_lengths.unsqueeze(1).to(DEVICE)
+            batch_encoded_inchis = batch_encoded_inchis
             batch_lev_dists = []
             for j in range(args.batch_chunks):
                 imgs = batch_imgs[j*args.chunk_size:(j+1)*args.chunk_size,:,:,:]
                 encoded_inchis = batch_encoded_inchis[j*args.chunk_size:(j+1)*args.chunk_size,:]
-                inchi_lengths = batch_inchi_lengths[j*args.chunk_size:(j+1)*args.chunk_size,:]
 
                 decoded = model.predict(imgs, search_mode='greedy', width=1, device=DEVICE).cpu()
                 for k in range(args.chunk_size):
