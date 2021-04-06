@@ -41,7 +41,7 @@ def main(args):
 
     os.makedirs(args.range_test_dir, exist_ok=True)
     if args.model_name is not None:
-        args.range_fn = '{}/{}_lr_range_test.txt'.format(args.range_test_dir, '_'+args.model_name)
+        args.range_fn = '{}/{}_lr_range_test.txt'.format(args.range_test_dir, args.model_name)
     else:
         args.range_fn = '{}/lr_range_test.txt'.format(args.range_test_dir)
     range_file = open(args.range_fn, 'a')
