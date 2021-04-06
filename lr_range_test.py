@@ -106,7 +106,7 @@ def main(args):
         val_loader = torch.utils.data.DataLoader(val_train, batch_size=args.batch_size,
                                                  shuffle=True, num_workers=0,
                                                  pin_memory=False, drop_last=True)
-        avg_lev_dist = validate(val_loader, model, args)
+        avg_lev_dist = validate(val_loader, model, args, ord_dict)
         del val_train, val_loader
 
         range_file = open(args.range_fn, 'a')
@@ -145,7 +145,7 @@ def train(train_loader, model, optimizers, args):
             optimizer.step()
             optimizer.zero_grad()
 
-def validate(val_loader, model, args):
+def validate(val_loader, model, args, ord_dict):
 
     model.eval()
     lev_dists = []
