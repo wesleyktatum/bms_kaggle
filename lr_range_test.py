@@ -201,9 +201,9 @@ if __name__ == '__main__':
     parser.add_argument('--grad_clip', type=int, default=5)
     parser.add_argument('--prerotated', default=False, action='store_true')
     parser.add_argument('--encoder', choices=['resnet18', 'resnet34', 'resnet50'],
-                        default='resnet18')
+                        default='resnet34')
     parser.add_argument('--decoder', choices=['bilstm', 'trans128_4x', 'trans256_4x', 'trans512_4x'],
-                        default='trans128_4x')
+                        default='trans512_4x')
     parser.add_argument('--n_decoder_layers', type=int, default=3)
 
     args = parser.parse_args()
