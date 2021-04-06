@@ -91,7 +91,7 @@ def main(args):
         mode = 'train'
         train_shard_id = np.random.choice(np.arange(n_train_shards-1), size=1,
                                           replace=False)[0]
-        mol_train = MoleculeDataset(mode, shard_id, args.imgs_dir, args.img_size,
+        mol_train = MoleculeDataset(mode, train_shard_id, args.imgs_dir, args.img_size,
                                     args.prerotated, args.rotate)
         train_loader = torch.utils.data.DataLoader(mol_train, batch_size=args.batch_size,
                                                    shuffle=True, num_workers=0,
@@ -101,7 +101,7 @@ def main(args):
 
         mode = 'val'
         val_shard_id = 0
-        val_train = MoleculeDataset(mode, shard_id, args.imgs_dir, args.img_size,
+        val_train = MoleculeDataset(mode, val_shard_id, args.imgs_dir, args.img_size,
                                     args.prerotated, args.rotate)
         val_loader = torch.utils.data.DataLoader(val_train, batch_size=args.batch_size,
                                                  shuffle=True, num_workers=0,
