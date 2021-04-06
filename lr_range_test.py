@@ -9,7 +9,7 @@ import pandas as pd
 
 from util import *
 from loss import ce_loss
-# from dataloader import MoleculeDataset
+from dataloader import MoleculeDataset
 from models.sasa import ResNet26, ResNet38, ResNet50
 from models.axial import axial18s, axial18srpe, axial26s, axial50s, axial50m, axial50l
 from models.resnet import resnet18, resnet34, resnet50
@@ -43,7 +43,7 @@ def main(args):
     if args.model_name is not None:
         args.range_fn = '{}/{}_lr_range_test.txt'.format(args.range_test_dir, '_'+args.model_name)
     else:
-        args.range_fn = '{}/{}_lr_range_test.txt'.format(args.range_test_dir)
+        args.range_fn = '{}/lr_range_test.txt'.format(args.range_test_dir)
     range_file = open(args.range_fn, 'a')
     range_file.write('lr,lev_dist\n')
     range_file.close()
@@ -85,7 +85,7 @@ def main(args):
 
     lr_range = np.geomspace(args.base_lr, args.max_lr, args.n_lr)
     for lr in lr_range:
-        for p in self.optimizer.param_groups:
+        for p in ranged_optimizer.param_groups:
             p['lr'] = lr
 
         mode = 'train'
