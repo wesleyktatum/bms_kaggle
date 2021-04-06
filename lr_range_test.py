@@ -129,7 +129,7 @@ def train(train_loader, model, optimizers, args):
             encoded_inchis = batch_encoded_inchis[j*args.chunk_size:(j+1)*args.chunk_size,:]
             inchi_lengths = batch_inchi_lengths[j*args.chunk_size:(j+1)*args.chunk_size,:]
 
-            preds, encoded_inchis, decode_lengths = model(imgs, encoded_inchis, inchi_lengths, args.mix_scheduler)
+            preds, encoded_inchis, decode_lengths = model(imgs, encoded_inchis, inchi_lengths, None)
             targets = encoded_inchis[:,1:]
 
             preds = pack_padded_sequence(preds, decode_lengths, batch_first=True).data
