@@ -78,15 +78,11 @@ def main(args):
     n_evaluated = 0
     for shard_id in range(n_shards):
         if args.mode == 'eval':
-            if shard_id > 0:
-                break
             mol_data = MoleculeDataset(args.mode, shard_id, args.imgs_dir, ckpt_args.img_size, rotate=False)
             data_loader = torch.utils.data.DataLoader(mol_data, batch_size=args.batch_size,
                                                       shuffle=False, num_workers=0,
                                                       pin_memory=False, drop_last=False)
             for i, batch_imgs in enumerate(data_loader):
-                if i > 9:
-                    break
                 batch_imgs = batch_imgs.to(DEVICE)
                 for j in range(args.batch_chunks):
                     imgs = batch_imgs[j*args.chunk_size:(j+1)*args.chunk_size,:,:,:]
