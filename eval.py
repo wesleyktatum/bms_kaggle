@@ -62,7 +62,7 @@ def main(args):
     if args.mode == 'eval':
         img_ids = pd.read_csv(os.path.join(args.imgs_dir, 'sample_submission.csv')).image_id.values
         log_file = open(write_fn, 'a')
-        log_file.write('image_id,InChI\n')
+        log_file.write('image_id\tInChI\n')
         log_file.close()
 
     if args.write_predictions:
@@ -93,7 +93,7 @@ def main(args):
                         pred_inchi = decode_inchi(decoded[k,:], ord_dict)
                         img_id = img_ids[img_id_idx+k]
                         log_file = open(write_fn, 'a')
-                        log_file.write('{},{}\n'.format(img_id, pred_inchi))
+                        log_file.write('{}\t{}\n'.format(img_id, pred_inchi))
                         log_file.close()
         else:
             if shard_id > 0:
