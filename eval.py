@@ -58,7 +58,7 @@ def main(args):
     model = model.to(DEVICE)
     model.eval()
 
-    write_fn = os.path.join(args.eval_dir, '{}_{}_{}_{}_predictions.txt'.format(ckpt_args.model_name, n_epochs, args.mode, args.search_mode))
+    write_fn = os.path.join(args.eval_dir, '{}_{}_{}_predictions.txt'.format(args.checkpoint_fn, args.mode, args.search_mode))
     if args.mode == 'eval':
         img_ids = pd.read_csv(os.path.join(args.imgs_dir, 'sample_submission.csv')).image_id.values
         log_file = open(write_fn, 'a')
