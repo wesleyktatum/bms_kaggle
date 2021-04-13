@@ -256,12 +256,12 @@ class MultiHeadedAttention(nn.Module):
         tup = attention(query, key, value, mask=mask,
                         dropout=self.dropout, is_src=is_src)
         x = tup[0]
-        self.attn = tup[1]
+        attn = tup[1]
 
         # 3) "Concat" using a view and apply a final linear
         x = x.transpose(1, 2).contiguous().view(nbatches, -1, self.h * self.d_k)
         if return_attn:
-            return self.attn
+            return attn
         else:
             return self.linears[-1](x)
 
