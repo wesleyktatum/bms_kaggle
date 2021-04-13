@@ -255,7 +255,7 @@ class MultiHeadedAttention(nn.Module):
 
         # 2) Apply attention on all the projected vectors in batch
         tup = attention(query, key, value, mask=mask,
-                                 dropout=self.dropout)
+                        dropout=self.dropout)
         x = tup[0]
         self.attn = tup[1]
 
@@ -377,13 +377,14 @@ def make_std_mask(tgt, pad):
 
 def attention(query, key, value, mask=None, dropout=None):
     "Compute 'Scaled Dot Product Attention' (adapted from Viswani et al.)"
+    self.dropout = nn.Dropout(p=dropout)
     d_k = query.size(-1)
     scores = torch.matmul(query, key.transpose(-2, -1)) / math.sqrt(d_k)
     if mask is not None:
         scores = scores.masked_fill(mask == 0, -1e9)
     p_attn = F.softmax(scores, dim=-1)
     if dropout is not None:
-        p_attn = nn.Dropout(p=dropout)
+        p_attn = self.dropout(p_attn)
     return torch.matmul(p_attn, value), p_attn
 
 def trans128_4x(vocab_size, device, teacher_force, d_enc=512, N=3):
