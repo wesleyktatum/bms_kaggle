@@ -96,6 +96,7 @@ def main(args):
                     #     log_file = open(write_fn, 'a')
                     #     log_file.write('{}\t{}\n'.format(img_id, pred_inchi))
                     #     log_file.close()
+            del mol_data, data_loader
         else:
             if shard_id > 0:
                 break
