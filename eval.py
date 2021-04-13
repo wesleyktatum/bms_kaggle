@@ -86,15 +86,16 @@ def main(args):
                 batch_imgs = batch_imgs.to(DEVICE)
                 for j in range(args.batch_chunks):
                     imgs = batch_imgs[j*args.chunk_size:(j+1)*args.chunk_size,:,:,:]
-                    img_id_idx = shard_id*mol_data.shard_size+i*args.batch_size+j*args.chunk_size
-                    decoded = model.predict(imgs, search_mode=args.search_mode, width=args.beam_width,
-                                            device=DEVICE).cpu()
-                    for k in range(args.chunk_size):
-                        pred_inchi = decode_inchi(decoded[k,:], ord_dict)
-                        img_id = img_ids[img_id_idx+k]
-                        log_file = open(write_fn, 'a')
-                        log_file.write('{}\t{}\n'.format(img_id, pred_inchi))
-                        log_file.close()
+                    print(i, j, imgs.shape)
+                    # img_id_idx = shard_id*mol_data.shard_size+i*args.batch_size+j*args.chunk_size
+                    # decoded = model.predict(imgs, search_mode=args.search_mode, width=args.beam_width,
+                    #                         device=DEVICE).cpu()
+                    # for k in range(args.chunk_size):
+                    #     pred_inchi = decode_inchi(decoded[k,:], ord_dict)
+                    #     img_id = img_ids[img_id_idx+k]
+                    #     log_file = open(write_fn, 'a')
+                    #     log_file.write('{}\t{}\n'.format(img_id, pred_inchi))
+                    #     log_file.close()
         else:
             if shard_id > 0:
                 break
