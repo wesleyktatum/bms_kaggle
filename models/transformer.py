@@ -74,6 +74,9 @@ class Transformer(nn.Module):
 
         return preds, encoded_inchis, decode_lengths
 
+    def sequential_predict(self, embedded_imgs, inchis, inchi_mask):
+        pass
+
     def two_pass_mixed_predict(self, embedded_imgs, inchis, inchi_mask, alpha_mix):
         ### embed true inchi
         true_inchis = self.inchi_embed(inchis)
@@ -129,11 +132,12 @@ class Transformer(nn.Module):
             for j in range(width):
                 freeze_idxs[i].append(j)
         for i in range(self.tgt_length-1):
+            print(i)
             decoded = decoded.view(batch_size*width,-1)
             decoded_mask = Variable(subsequent_mask(decoded.size(1)).long()).to(device)
             out = self.inchi_embed(decoded)
             out = self.decoder(Variable(out), imgs, decoded_mask)
-            probs = F.softmax(self.generator(out[:,i,:]), dim=-1).view(batch_size, width, -1)
+            probs = F.log_softmax(self.generator(out[:,i,:]), dim=-1).view(batch_size, width, -1)
             topk_probs, topk_idxs = torch.topk(probs, k=width)
             cumk_probs = topk_probs * cum_probs
             sorted_idxs = torch.argsort(cumk_probs.view(batch_size, width**2, -1), dim=1, descending=True)
@@ -185,8 +189,6 @@ class Transformer(nn.Module):
         for i in range(batch_size):
             best_decoded[i,:] = decoded[i,top_idxs[i].item(),1:]
         return best_decoded
-
-
 
 ################### Decoder Layers ######################
 
@@ -252,8 +254,10 @@ class MultiHeadedAttention(nn.Module):
                             for l, x in zip(self.linears, (query, key, value))]
 
         # 2) Apply attention on all the projected vectors in batch
-        x, self.attn = attention(query, key, value, mask=mask,
+        tup = attention(query, key, value, mask=mask,
                                  dropout=self.dropout)
+        x = tup[0]
+        self.attn = tup[1]
 
         # 3) "Concat" using a view and apply a final linear
         x = x.transpose(1, 2).contiguous().view(nbatches, -1, self.h * self.d_k)
