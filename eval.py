@@ -3,7 +3,7 @@ import json
 import argparse
 import numpy as np
 import pandas as pd
-from time import per_counter
+from time import perf_counter
 
 from util import *
 from dataloader import MoleculeDataset
