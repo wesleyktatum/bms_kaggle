@@ -382,8 +382,8 @@ def attention(query, key, value, mask=None, dropout=None):
     if mask is not None:
         scores = scores.masked_fill(mask == 0, -1e9)
     p_attn = F.softmax(scores, dim=-1)
-    if dropout is not None:
-        p_attn = dp(p_attn)
+    # if dropout is not None:
+    #     p_attn = dp(p_attn)
     return torch.matmul(p_attn, value), p_attn
 
 def trans128_4x(vocab_size, device, teacher_force, d_enc=512, N=3):
