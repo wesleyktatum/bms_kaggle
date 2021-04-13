@@ -241,7 +241,7 @@ class MultiHeadedAttention(nn.Module):
         self.linears = clones(nn.Linear(d_dec, d_dec), 4)
         self.dropout = torch.tensor([dropout])
 
-    def forward(self, query, key, value, mask, is_src, return_attn=False):
+    def forward(self, query, key, value, mask, is_src):
         "Implements Figure 2"
         if mask is not None:
             # Same mask applied to all h heads
@@ -260,10 +260,7 @@ class MultiHeadedAttention(nn.Module):
 
         # 3) "Concat" using a view and apply a final linear
         x = x.transpose(1, 2).contiguous().view(nbatches, -1, self.h * self.d_k)
-        if return_attn:
-            return attn
-        else:
-            return self.linears[-1](x)
+        return self.linears[-1](x)
 
 class PositionwiseFeedForward(nn.Module):
     "Feedforward implementation"
