@@ -214,8 +214,8 @@ class AttentionLayer(nn.Module):
         self.sublayer = clones(SublayerConnection(self.d_dec, dropout), 3)
 
     def forward(self, x, mem, tgt_mask):
-        x = self.sublayer[0](x, lambda x: self.self_attn(x, x, x, tgt_mask))
-        x = self.sublayer[1](x, lambda x: self.src_attn(x, mem, mem))
+        x = self.sublayer[0](x, lambda x: self.self_attn(x, x, x, tgt_mask, is_src=False))
+        x = self.sublayer[1](x, lambda x: self.src_attn(x, mem, mem, tgt_mask))
         return self.sublayer[2](x, self.feed_forward)
 
 class Generator(nn.Module):
@@ -242,7 +242,7 @@ class MultiHeadedAttention(nn.Module):
         self.attn = None
         self.dropout = dropout
 
-    def forward(self, query, key, value, mask=None, return_attn=False):
+    def forward(self, query, key, value, mask, return_attn=False, is_src=True):
         "Implements Figure 2"
         if mask is not None:
             # Same mask applied to all h heads
@@ -255,7 +255,7 @@ class MultiHeadedAttention(nn.Module):
 
         # 2) Apply attention on all the projected vectors in batch
         tup = attention(query, key, value, mask=mask,
-                        dropout=self.dropout)
+                        dropout=self.dropout, is_src=is_src)
         x = tup[0]
         self.attn = tup[1]
 
@@ -376,12 +376,12 @@ def make_std_mask(tgt, pad):
     tgt_mask.requires_grad = False
     return tgt_mask
 
-def attention(query, key, value, mask=None, dropout=None):
+def attention(query, key, value, mask=None, dropout=None, is_src=True):
     "Compute 'Scaled Dot Product Attention' (adapted from Viswani et al.)"
     # dp = nn.Dropout(p=dropout)
     d_k = query.size(-1)
     scores = torch.matmul(query, key.transpose(-2, -1)) / math.sqrt(d_k)
-    if mask is not None:
+    if not is_src:
         scores = scores.masked_fill(mask == 0, -1e9)
     p_attn = F.softmax(scores, dim=-1)
     # if dropout is not None:
