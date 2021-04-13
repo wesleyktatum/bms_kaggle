@@ -3,6 +3,7 @@ import json
 import argparse
 import numpy as np
 import pandas as pd
+from time import per_counter
 
 from util import *
 from dataloader import MoleculeDataset
@@ -76,26 +77,30 @@ def main(args):
 
     lev_dists = []
     n_evaluated = 0
+    start = perf_counter()
     for shard_id in range(n_shards):
         if args.mode == 'eval':
+            if shard_id > 0:
+                break
             mol_data = MoleculeDataset(args.mode, shard_id, args.imgs_dir, ckpt_args.img_size, rotate=False)
             data_loader = torch.utils.data.DataLoader(mol_data, batch_size=args.batch_size,
                                                       shuffle=False, num_workers=0,
                                                       pin_memory=False, drop_last=False)
             for i, batch_imgs in enumerate(data_loader):
+                if i > 3:
+                    break
                 batch_imgs = batch_imgs.to(DEVICE)
                 for j in range(args.batch_chunks):
                     imgs = batch_imgs[j*args.chunk_size:(j+1)*args.chunk_size,:,:,:]
-                    print(i, j, imgs.shape)
-                    # img_id_idx = shard_id*mol_data.shard_size+i*args.batch_size+j*args.chunk_size
-                    # decoded = model.predict(imgs, search_mode=args.search_mode, width=args.beam_width,
-                    #                         device=DEVICE).cpu()
-                    # for k in range(args.chunk_size):
-                    #     pred_inchi = decode_inchi(decoded[k,:], ord_dict)
-                    #     img_id = img_ids[img_id_idx+k]
-                    #     log_file = open(write_fn, 'a')
-                    #     log_file.write('{}\t{}\n'.format(img_id, pred_inchi))
-                    #     log_file.close()
+                    img_id_idx = shard_id*mol_data.shard_size+i*args.batch_size+j*args.chunk_size
+                    decoded = model.predict(imgs, search_mode=args.search_mode, width=args.beam_width,
+                                            device=DEVICE).cpu()
+                    for k in range(args.chunk_size):
+                        pred_inchi = decode_inchi(decoded[k,:], ord_dict)
+                        img_id = img_ids[img_id_idx+k]
+                        log_file = open(write_fn, 'a')
+                        log_file.write('{}\t{}\n'.format(img_id, pred_inchi))
+                        log_file.close()
             del mol_data, data_loader
         else:
             if shard_id > 0:
@@ -131,7 +136,8 @@ def main(args):
                     break
                 lev_dists.append(np.mean(batch_lev_dists))
 
-
+    end = perf_counter()
+    print('Took {} s to run inference on 1024 samples'.format(round(end-start, 4)))
     if args.mode != 'eval':
         avg_lev_dist = np.mean(lev_dists)
         print('Average Levenshtein Distance ({}) - {}'.format(args.mode, avg_lev_dist))
