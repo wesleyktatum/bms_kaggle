@@ -56,6 +56,7 @@ def main(args):
                               device=DEVICE, teacher_force=False)
     model = CaptionModel(encoder, decoder)
     model.load_state_dict(ckpt['model_state_dict'])
+    model = torch.jit.script(model)
     model = model.to(DEVICE)
     model.eval()
 
