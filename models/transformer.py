@@ -305,8 +305,7 @@ class PositionalEncoding(nn.Module):
         self.register_buffer('pe', pe)
 
     def forward(self, x):
-        x += Variable(self.pe[:, :x.size(1)],
-                      requires_grad=False)
+        x += self.pe[:, :x.size(1)].requires_grad(False)
         return self.dropout(x)
 
 ############## Utility Layers ####################
@@ -372,7 +371,7 @@ def make_std_mask(tgt, pad):
         tgt_mask (torch.tensor): Sequential target mask
     """
     tgt_mask = (tgt != pad).unsqueeze(-2)
-    tgt_mask = tgt_mask & Variable(subsequent_mask(tgt.size(-1)).type_as(tgt_mask.data))
+    tgt_mask = tgt_mask & subsequent_mask(tgt.size(-1)).type_as(tgt_mask.data).requires_grad(True)
     return tgt_mask
 
 def attention(query, key, value, mask=None, dropout=None):
