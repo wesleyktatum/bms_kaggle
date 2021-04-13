@@ -376,7 +376,7 @@ def make_std_mask(tgt, pad):
 
 def attention(query, key, value, mask=None, dropout=None):
     "Compute 'Scaled Dot Product Attention' (adapted from Viswani et al.)"
-    dp = nn.Dropout(p=dropout)
+    # dp = nn.Dropout(p=dropout)
     d_k = query.size(-1)
     scores = torch.matmul(query, key.transpose(-2, -1)) / math.sqrt(d_k)
     if mask is not None:
