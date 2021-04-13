@@ -240,7 +240,7 @@ class MultiHeadedAttention(nn.Module):
         self.h = h
         self.linears = clones(nn.Linear(d_dec, d_dec), 4)
         self.attn = None
-        self.dropout = dropout
+        self.dropout = torch.tensor([dropout])
 
     def forward(self, query, key, value, mask, is_src, return_attn=False):
         "Implements Figure 2"
