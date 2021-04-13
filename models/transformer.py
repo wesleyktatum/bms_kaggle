@@ -240,7 +240,7 @@ class MultiHeadedAttention(nn.Module):
         self.h = h
         self.linears = clones(nn.Linear(d_dec, d_dec), 4)
         self.attn = None
-        self.dropout = nn.Dropout(p=dropout)
+        self.dropout = dropout
 
     def forward(self, query, key, value, mask=None, return_attn=False):
         "Implements Figure 2"
@@ -383,7 +383,7 @@ def attention(query, key, value, mask=None, dropout=None):
         scores = scores.masked_fill(mask == 0, -1e9)
     p_attn = F.softmax(scores, dim=-1)
     if dropout is not None:
-        p_attn = dropout(p_attn)
+        p_attn = nn.Dropout(p=dropout)
     return torch.matmul(p_attn, value), p_attn
 
 def trans128_4x(vocab_size, device, teacher_force, d_enc=512, N=3):
