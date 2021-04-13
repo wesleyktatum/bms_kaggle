@@ -376,7 +376,7 @@ def make_std_mask(tgt, pad):
     tgt_mask.requires_grad = False
     return tgt_mask
 
-def attention(query, key, value, mask=None, dropout=None, is_src=True):
+def attention(query, key, value, mask, dropout=None, is_src=True):
     "Compute 'Scaled Dot Product Attention' (adapted from Viswani et al.)"
     # dp = nn.Dropout(p=dropout)
     d_k = query.size(-1)
