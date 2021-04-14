@@ -87,19 +87,49 @@ def main(gpu, args, shard_id):
     start = perf_counter()
     for i, (batch_imgs, batch_img_id_idxs) in enumerate(data_loader):
         batch_imgs = batch_imgs.cuda(non_blocking=True)
-        for j in range(args.batch_chunks):
-            if j > 0:
-                break
-            imgs = batch_imgs[j*args.chunk_size:(j+1)*args.chunk_size,:,:,:]
-            img_id_idxs = batch_img_id_idxs[j*args.chunk_size:(j+1)*args.chunk_size]
-            decoded = model.module.predict(imgs, search_mode=args.search_mode, width=args.beam_width,
-                                           device=DEVICE)
-            for k, img_id_idx in enumerate(img_id_idxs):
-                pred_inchi = decode_inchi(decoded[k,:], args.ord_dict)
-                img_id = img_ids[img_id_idx]
-                log_file = open(write_fn, 'a')
-                log_file.write('{}\t{}\n'.format(img_id, pred_inchi))
-                log_file.close()
+        batch_size = batch_imgs.shape[0]
+        final_batch = False
+        if batch_size != args.batch_size:
+            final_batch = True
+            final_batch_size = batch_size
+            full_chunks = int(final_batch_size / args.chunk_size)
+            final_chunk = final_batch_size % args.chunk_size
+        if final_batch:
+            for j in range(full_chunks+1):
+                if j == full_chunks:
+                    imgs = batch_imgs[j*args.chunk_size:(j*args.chunk_size)+final_chunk,:,:,:]
+                    img_id_idxs = batch_img_id_idxs[j*args.chunk_size:(j*args.chunk_size)+final_chunk]
+                    decoded = model.module.predict(imgs, search_mode=args.search_mode, width=args.beam_width,
+                                                   device=DEVICE)
+                    for k, img_id_idx in enumerate(img_id_idxs):
+                        pred_inchi = decode_inchi(decoded[k,:], args.ord_dict)
+                        img_id = img_ids[img_id_idx]
+                        log_file = open(write_fn, 'a')
+                        log_file.write('{}\t{}\n'.format(img_id, pred_inchi))
+                        log_file.close()
+                else:
+                    imgs = batch_imgs[j*args.chunk_size:(j+1)*args.chunk_size,:,:,:]
+                    img_id_idxs = batch_img_id_idxs[j*args.chunk_size:(j+1)*args.chunk_size]
+                    decoded = model.module.predict(imgs, search_mode=args.search_mode, width=args.beam_width,
+                                                   device=DEVICE)
+                    for k, img_id_idx in enumerate(img_id_idxs):
+                        pred_inchi = decode_inchi(decoded[k,:], args.ord_dict)
+                        img_id = img_ids[img_id_idx]
+                        log_file = open(write_fn, 'a')
+                        log_file.write('{}\t{}\n'.format(img_id, pred_inchi))
+                        log_file.close()
+        else:
+            for j in range(args.batch_chunks):
+                imgs = batch_imgs[j*args.chunk_size:(j+1)*args.chunk_size,:,:,:]
+                img_id_idxs = batch_img_id_idxs[j*args.chunk_size:(j+1)*args.chunk_size]
+                decoded = model.module.predict(imgs, search_mode=args.search_mode, width=args.beam_width,
+                                               device=DEVICE)
+                for k, img_id_idx in enumerate(img_id_idxs):
+                    pred_inchi = decode_inchi(decoded[k,:], args.ord_dict)
+                    img_id = img_ids[img_id_idx]
+                    log_file = open(write_fn, 'a')
+                    log_file.write('{}\t{}\n'.format(img_id, pred_inchi))
+                    log_file.close()
     del mol_data, data_loader
 
     end = perf_counter()
