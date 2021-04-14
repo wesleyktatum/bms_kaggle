@@ -78,7 +78,6 @@ def main(args):
 
     lev_dists = []
     n_evaluated = 0
-    start = perf_counter()
     for shard_id in range(n_shards):
         if args.mode == 'eval':
             if shard_id > 0:
@@ -87,6 +86,7 @@ def main(args):
             data_loader = torch.utils.data.DataLoader(mol_data, batch_size=args.batch_size,
                                                       shuffle=False, num_workers=0,
                                                       pin_memory=False, drop_last=False)
+            start = perf_counter()
             for i, batch_imgs in enumerate(data_loader):
                 if i > 3:
                     break
