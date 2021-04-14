@@ -59,7 +59,7 @@ class Transformer(nn.Module):
 
         ### transform inchis for decoder
         inchis = encoded_inchis[:,:-1]
-        inchi_mask = make_std_mask(inchis, self.pad_idx)
+        inchi_mask = make_std_mask(inchis, self.pad_idx, self.device)
 
         if self.teacher_force:
             ### embed inchis
@@ -123,7 +123,7 @@ class Transformer(nn.Module):
                                                              imgs.shape[2])
 
         ### step through sequence to make predictions
-        decoded = torch.ones(batch_size,width,1).fill_(self.sos_idx).long().to(device)
+        decoded = torch.ones(batch_size,width,1, device=device).fill_(self.sos_idx).long()
         cum_probs = torch.ones(batch_size,width,1).fill_(1.).to(device)
         freeze = torch.zeros(batch_size,width,1).to(device)
         freeze_idxs = []
@@ -133,7 +133,7 @@ class Transformer(nn.Module):
                 freeze_idxs[i].append(j)
         for i in range(self.tgt_length-1):
             decoded = decoded.view(batch_size*width,-1)
-            decoded_mask = Variable(subsequent_mask(decoded.size(1)).long()).to(device)
+            decoded_mask = subsequent_mask(decoded.size(1), device).long()
             out = self.inchi_embed(decoded)
             out = self.decoder(Variable(out), imgs, decoded_mask)
             probs = F.log_softmax(self.generator(out[:,i,:]), dim=-1).view(batch_size, width, -1)
@@ -349,14 +349,14 @@ def clones(module, N):
     http://nlp.seas.harvard.edu/2018/04/03/attention.html)"""
     return nn.ModuleList([copy.deepcopy(module) for _ in range(N)])
 
-def subsequent_mask(size):
+def subsequent_mask(size, device):
     """Mask out subsequent positions (adapted from
     http://nlp.seas.harvard.edu/2018/04/03/attention.html)"""
     attn_shape = (1, size, size)
-    subsequent_mask = np.triu(np.ones(attn_shape), k=1).astype('uint8')
-    return torch.from_numpy(subsequent_mask) == 0
+    subsequent_mask = torch.triu(torch.ones(attn_shape, device=device), diagonal=1)
+    return subsequent_mask == 0
 
-def make_std_mask(tgt, pad):
+def make_std_mask(tgt, pad, device):
     """
     Creates sequential mask matrix for target input (adapted from
     http://nlp.seas.harvard.edu/2018/04/03/attention.html)
@@ -367,7 +367,7 @@ def make_std_mask(tgt, pad):
         tgt_mask (torch.tensor): Sequential target mask
     """
     tgt_mask = (tgt != pad).unsqueeze(-2)
-    tgt_mask = tgt_mask & subsequent_mask(tgt.size(-1)).type_as(tgt_mask.data)
+    tgt_mask = tgt_mask & subsequent_mask(tgt.size(-1), device).type_as(tgt_mask.data)
     tgt_mask.requires_grad = False
     return tgt_mask
 

@@ -59,6 +59,7 @@ def main(args):
     model = nn.DataParallel(model)
     model = model.to(DEVICE)
     model.eval()
+    n_gpus = torch.cuda.device_count()
 
     write_fn = os.path.join(args.eval_dir, '{}_{}_{}_predictions.txt'.format(args.checkpoint_fn.split('/')[-1].split('.')[0], args.mode, args.search_mode))
     if args.mode == 'eval':
@@ -84,8 +85,8 @@ def main(args):
                 break
             mol_data = MoleculeDataset(args.mode, shard_id, args.imgs_dir, ckpt_args.img_size, rotate=False)
             data_loader = torch.utils.data.DataLoader(mol_data, batch_size=args.batch_size,
-                                                      shuffle=False, num_workers=0,
-                                                      pin_memory=False, drop_last=False)
+                                                      shuffle=False, num_workers=n_gpus*4,
+                                                      pin_memory=True, drop_last=False)
             start = perf_counter()
             for i, batch_imgs in enumerate(data_loader):
                 if i > 3:
