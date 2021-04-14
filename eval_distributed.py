@@ -25,7 +25,7 @@ import Levenshtein as lev
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-def main(gpu, args, ckpt_args, shard_id, mol_data):
+def main(gpu, args, ckpt_args, shard_id):
     rank = gpu
 
     if ckpt_args.encoder == 'resnet18':
