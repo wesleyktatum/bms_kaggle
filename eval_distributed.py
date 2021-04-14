@@ -25,7 +25,7 @@ import Levenshtein as lev
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-def main(gpu, args, ckpt_args, shard_id):
+def main(gpu, args, ckpt, ckpt_args, shard_id):
     rank = gpu
 
     if ckpt_args.encoder == 'resnet18':
@@ -137,4 +137,4 @@ if __name__ == '__main__':
     shard_id = 0
     print('crafting spawns...')
 
-    mp.spawn(main, nprocs=args.n_gpus, args=(args, ckpt_args, shard_id,))
+    mp.spawn(main, nprocs=args.n_gpus, args=(args, ckpt, ckpt_args, shard_id,))
