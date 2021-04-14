@@ -25,9 +25,10 @@ import Levenshtein as lev
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-def main(gpu, args, ckpt, ckpt_args, shard_id):
+def main(gpu, args, ckpt, ckpt_args, shard_id, img_ids):
     rank = gpu
-
+    ckpt, ckpt_args, _ = load_model_from_ckpt(args.checkpoint_fn)
+    
     if ckpt_args.encoder == 'resnet18':
         encoder = resnet18(pretrained=False, finetune=True)
         d_enc = 512
@@ -125,7 +126,6 @@ if __name__ == '__main__':
     args.chunk_size = args.batch_size // args.batch_chunks
 
     os.makedirs(args.eval_dir, exist_ok=True)
-    ckpt, ckpt_args, _ = load_model_from_ckpt(args.checkpoint_fn)
     args.n_gpus = torch.cuda.device_count()
 
     args.img_ids = pd.read_csv(os.path.join(args.imgs_dir, 'sample_submission.csv')).image_id.values
@@ -137,4 +137,4 @@ if __name__ == '__main__':
     shard_id = 0
     print('crafting spawns...')
 
-    mp.spawn(main, nprocs=args.n_gpus, args=(args, ckpt, ckpt_args, shard_id,))
+    mp.spawn(main, nprocs=args.n_gpus, args=(args, shard_ids))
