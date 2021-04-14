@@ -145,7 +145,7 @@ if __name__ == '__main__':
     parser.add_argument('--data_dir', type=str, default='data')
     parser.add_argument('--eval_dir', type=str, default='eval')
     parser.add_argument('--search_mode', choices=['greedy', 'beam'], default='greedy')
-    parser.add_argument('--beam_width', type=int, default=5)
+    parser.add_argument('--beam_width', type=int, default=4)
     parser.add_argument('--checkpoint_fn', type=str, default=None)
     parser.add_argument('--batch_size', type=int, default=256)
     parser.add_argument('--batch_chunks', type=int, default=8)
