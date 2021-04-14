@@ -89,7 +89,7 @@ def main(gpu, args, shard_id):
         batch_imgs = batch_imgs.cuda(non_blocking=True)
         for j in range(args.batch_chunks):
             imgs = batch_imgs[j*args.chunk_size:(j+1)*args.chunk_size,:,:,:]
-            img_id_idxs = batch_img_id_idxs[j*args.chunk_size:(j+1)*args.chunk_size,:]
+            img_id_idxs = batch_img_id_idxs[j*args.chunk_size:(j+1)*args.chunk_size]
             decoded = model.module.predict(imgs, search_mode=args.search_mode, width=args.beam_width,
                                            device=DEVICE)
             for k, img_id_idx in enumerate(img_id_idxs):
