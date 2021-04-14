@@ -120,4 +120,4 @@ if __name__ == '__main__':
     for shard_id in range(n_shards):
         print(shard_id)
 
-    mp.spawn(main, nprocs=args.gpus, args=(args, ckpt_args, 0,))
+    mp.spawn(main, nprocs=args.n_gpus, args=(args, ckpt_args, 0,))
