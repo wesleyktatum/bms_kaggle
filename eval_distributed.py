@@ -84,9 +84,12 @@ def main(gpu, args, shard_id):
                                               pin_memory=False, drop_last=False,
                                               sampler=data_sampler)
 
+    start = perf_counter()
     for i, (batch_imgs, batch_img_id_idxs) in enumerate(data_loader):
         batch_imgs = batch_imgs.cuda(non_blocking=True)
         for j in range(args.batch_chunks):
+            if j > 0:
+                break
             imgs = batch_imgs[j*args.chunk_size:(j+1)*args.chunk_size,:,:,:]
             img_id_idxs = batch_img_id_idxs[j*args.chunk_size:(j+1)*args.chunk_size]
             decoded = model.module.predict(imgs, search_mode=args.search_mode, width=args.beam_width,
@@ -98,6 +101,11 @@ def main(gpu, args, shard_id):
                 log_file.write('{}\t{}\n'.format(img_id, pred_inchi))
                 log_file.close()
     del mol_data, data_loader
+
+    end = perf_counter()
+    log_file = open(write_fn, 'a')
+    log_file.write('took {} s to infer 256 samples'.format(end - start))
+    log_file.close()
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
