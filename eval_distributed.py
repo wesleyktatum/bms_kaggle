@@ -90,8 +90,8 @@ def main(gpu, args, shard_id):
         for j in range(args.batch_chunks):
             imgs = batch_imgs[j*args.chunk_size:(j+1)*args.chunk_size,:,:,:]
             img_id_idx = shard_id*mol_data.shard_size+i*args.batch_size+j*args.chunk_size
-            decoded = model.predict(imgs, search_mode=args.search_mode, width=args.beam_width,
-                                    device=DEVICE)
+            decoded = model.module.predict(imgs, search_mode=args.search_mode, width=args.beam_width,
+                                           device=DEVICE)
             for img_id_idx in img_id_idxs:
                 pred_inchi = decode_inchi(decoded[k,:], args.ord_dict)
                 img_id = args.img_ids[img_id_idx+k]
