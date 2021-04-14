@@ -56,7 +56,6 @@ def main(args):
                               device=DEVICE, teacher_force=False)
     model = CaptionModel(encoder, decoder)
     model.load_state_dict(ckpt['model_state_dict'])
-    model = nn.DataParallel(model)
     model = model.to(DEVICE)
     model.eval()
     n_gpus = torch.cuda.device_count()
@@ -95,7 +94,7 @@ def main(args):
                 for j in range(args.batch_chunks):
                     imgs = batch_imgs[j*args.chunk_size:(j+1)*args.chunk_size,:,:,:]
                     img_id_idx = shard_id*mol_data.shard_size+i*args.batch_size+j*args.chunk_size
-                    decoded = model.module.predict(imgs, search_mode=args.search_mode, width=args.beam_width,
+                    decoded = model.predict(imgs, search_mode=args.search_mode, width=args.beam_width,
                                                    device=DEVICE).cpu()
                     for k in range(args.chunk_size):
                         pred_inchi = decode_inchi(decoded[k,:], ord_dict)
