@@ -85,8 +85,6 @@ def main(gpu, args, shard_id):
                                               sampler=data_sampler)
 
     for i, (batch_imgs, batch_img_id_idxs) in enumerate(data_loader):
-        if i > 3:
-            break
         batch_imgs = batch_imgs.cuda(non_blocking=True)
         for j in range(args.batch_chunks):
             imgs = batch_imgs[j*args.chunk_size:(j+1)*args.chunk_size,:,:,:]
@@ -131,8 +129,6 @@ if __name__ == '__main__':
     n_shards = get_n_shards(shards_dir)
     for shard_id in range(n_shards):
         print(shard_id)
+        print('crafting spawns...')
 
-    shard_id = 0
-    print('crafting spawns...')
-
-    mp.spawn(main, nprocs=args.n_gpus, args=(args, shard_id,))
+        mp.spawn(main, nprocs=args.n_gpus, args=(args, shard_id,))
