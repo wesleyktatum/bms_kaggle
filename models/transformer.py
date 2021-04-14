@@ -132,7 +132,6 @@ class Transformer(nn.Module):
             for j in range(width):
                 freeze_idxs[i].append(j)
         for i in range(self.tgt_length-1):
-            print(i)
             decoded = decoded.view(batch_size*width,-1)
             decoded_mask = Variable(subsequent_mask(decoded.size(1)).long()).to(device)
             out = self.inchi_embed(decoded)
