@@ -88,7 +88,8 @@ class MoleculeDataset(Dataset):
             # log_file.close()
             return img, encoded_inchi, inchi_length
         else:
-            return img
+            img_idx = i + (self.shard_size*self.shard_id)
+            return img, torch.tensor(img_idx).long()
 
     def __len__(self):
         return self.sparse_imgs.shape[0]

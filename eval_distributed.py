@@ -25,70 +25,79 @@ import Levenshtein as lev
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-def main(gpu, args, ckpt_args, shard_id):
+def main(gpu, args, ckpt_args, shard_id, mol_data):
     rank = gpu
-    print(rank)
-    # if ckpt_args.encoder == 'resnet18':
-    #     encoder = resnet18(pretrained=False, finetune=True)
-    #     d_enc = 512
-    # elif ckpt_args.encoder == 'resnet34':
-    #     encoder = resnet34(pretrained=False, finetune=True)
-    #     d_enc = 512
-    # elif ckpt_args.encoder == 'resnet50':
-    #     encoder = resnet50(pretrained=False, finetune=True)
-    #     d_enc = 2048
-    # if ckpt_args.decoder == 'bilstm':
-    #     decoder = biLSTM512(vocab_size=args.vocab_size, device=DEVICE, d_enc=d_enc)
-    # elif ckpt_args.decoder == 'trans128_4x':
-    #     decoder = trans128_4x(vocab_size=args.vocab_size, d_enc=d_enc, N=ckpt_args.n_decoder_layers,
-    #                           device=DEVICE, teacher_force=False)
-    # elif ckpt_args.decoder == 'trans256_4x':
-    #     decoder = trans256_4x(vocab_size=args.vocab_size, d_enc=d_enc, N=ckpt_args.n_decoder_layers,
-    #                           device=DEVICE, teacher_force=False)
-    # elif ckpt_args.decoder == 'trans512_4x':
-    #     decoder = trans512_4x(vocab_size=args.vocab_size, d_enc=d_enc, N=ckpt_args.n_decoder_layers,
-    #                           device=DEVICE, teacher_force=False)
-    # model = CaptionModel(encoder, decoder)
-    # model.load_state_dict(ckpt['model_state_dict'])
-    # model = nn.DataParallel(model)
-    # model = model.to(DEVICE)
-    # model.eval()
-    #
-    # write_fn = os.path.join(args.eval_dir, '{}_{}_{}_predictions.txt'.format(args.checkpoint_fn.split('/')[-1].split('.')[0], args.mode, args.search_mode))
-    # if args.mode == 'eval':
-    #     img_ids = pd.read_csv(os.path.join(args.imgs_dir, 'sample_submission.csv')).image_id.values
-    #     log_file = open(write_fn, 'a')
-    #     log_file.write('image_id\tInChI\n')
-    #     log_file.close()
-    #
-    #
-    # for shard_id in range(n_shards):
-    #         if shard_id > 0:
-    #             break
-    #         mol_data = MoleculeDataset(args.mode, shard_id, args.imgs_dir, ckpt_args.img_size, rotate=False)
-    #         data_loader = torch.utils.data.DataLoader(mol_data, batch_size=args.batch_size,
-    #                                                   shuffle=False, num_workers=0,
-    #                                                   pin_memory=False, drop_last=False)
-    #         start = perf_counter()
-    #         for i, batch_imgs in enumerate(data_loader):
-    #             if i > 3:
-    #                 break
-    #             batch_imgs = batch_imgs.to(DEVICE)
-    #             for j in range(args.batch_chunks):
-    #                 imgs = batch_imgs[j*args.chunk_size:(j+1)*args.chunk_size,:,:,:]
-    #                 img_id_idx = shard_id*mol_data.shard_size+i*args.batch_size+j*args.chunk_size
-    #                 decoded = model.module.predict(imgs, search_mode=args.search_mode, width=args.beam_width,
-    #                                                device=DEVICE).cpu()
-    #                 for k in range(args.chunk_size):
-    #                     pred_inchi = decode_inchi(decoded[k,:], args.ord_dict)
-    #                     img_id = img_ids[img_id_idx+k]
-    #                     log_file = open(write_fn, 'a')
-    #                     log_file.write('{}\t{}\n'.format(img_id, pred_inchi))
-    #                     log_file.close()
-    #         del mol_data, data_loader
-    #
-    # end = perf_counter()
-    # print('Took {} s to run inference on 1024 samples'.format(round(end-start, 4)))
+
+    if ckpt_args.encoder == 'resnet18':
+        encoder = resnet18(pretrained=False, finetune=True)
+        d_enc = 512
+    elif ckpt_args.encoder == 'resnet34':
+        encoder = resnet34(pretrained=False, finetune=True)
+        d_enc = 512
+    elif ckpt_args.encoder == 'resnet50':
+        encoder = resnet50(pretrained=False, finetune=True)
+        d_enc = 2048
+    if ckpt_args.decoder == 'bilstm':
+        decoder = biLSTM512(vocab_size=args.vocab_size, device=DEVICE, d_enc=d_enc)
+    elif ckpt_args.decoder == 'trans128_4x':
+        decoder = trans128_4x(vocab_size=args.vocab_size, d_enc=d_enc, N=ckpt_args.n_decoder_layers,
+                              device=DEVICE, teacher_force=False)
+    elif ckpt_args.decoder == 'trans256_4x':
+        decoder = trans256_4x(vocab_size=args.vocab_size, d_enc=d_enc, N=ckpt_args.n_decoder_layers,
+                              device=DEVICE, teacher_force=False)
+    elif ckpt_args.decoder == 'trans512_4x':
+        decoder = trans512_4x(vocab_size=args.vocab_size, d_enc=d_enc, N=ckpt_args.n_decoder_layers,
+                              device=DEVICE, teacher_force=False)
+    model = CaptionModel(encoder, decoder)
+    model.load_state_dict(ckpt['model_state_dict'])
+    torch.cuda.set_device(gpu)
+    model.cuda(gpu)
+    model = nn.parallel.DistributedDataParallel(model, device_ids=[gpu])
+    model.eval()
+
+    write_fn = os.path.join(args.eval_dir, '{}_{}_{}_predictions{}.txt'.format(args.checkpoint_fn.split('/')[-1].split('.')[0], args.mode, args.search_mode, gpu))
+    try:
+        f = open(write_fn, 'r')
+        f.close()
+        already_wrote = True
+    except FileNotFoundError:
+        already_wrote = False
+    if not already_wrote:
+        log_file = open(write_fn, 'a')
+        log_file.write('image_id\tInChI\n')
+        log_file.close()
+
+    data_sampler = torch.utils.data.distributed.DistributedSampler(mol_data,
+                                                                   num_replicas=args.n_gpus,
+                                                                   rank=rank,
+                                                                   shuffle=False)
+
+    data_loader = torch.utils.data.DataLoader(mol_data, batch_size=args.batch_size,
+                                              shuffle=False, num_workers=0,
+                                              pin_memory=False, drop_last=False,
+                                              sampler=data_sampler)
+    start = perf_counter()
+    for i, (batch_imgs, img_id_idxs) in enumerate(data_loader):
+        if i > 3:
+            break
+        batch_imgs = batch_imgs.cuda(non_blocking=True)
+        for j in range(args.batch_chunks):
+            imgs = batch_imgs[j*args.chunk_size:(j+1)*args.chunk_size,:,:,:]
+            img_id_idx = shard_id*mol_data.shard_size+i*args.batch_size+j*args.chunk_size
+            decoded = model.predict(imgs, search_mode=args.search_mode, width=args.beam_width,
+                                    device=DEVICE)
+            for img_id_idx in img_id_idxs:
+                pred_inchi = decode_inchi(decoded[k,:], args.ord_dict)
+                img_id = args.img_ids[img_id_idx+k]
+                log_file = open(write_fn, 'a')
+                log_file.write('{}\t{}\n'.format(img_id, pred_inchi))
+                log_file.close()
+    del mol_data, data_loader
+
+    end = perf_counter()
+    log_file = open(write_fn, 'a')
+    log_file.write('took {} s to run inference on 1024 samples'.format(round(end-start, 4)))
+    log_file.close()
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -116,8 +125,13 @@ if __name__ == '__main__':
     ckpt, ckpt_args, _ = load_model_from_ckpt(args.checkpoint_fn)
     args.n_gpus = torch.cuda.device_count()
 
+    args.img_ids = pd.read_csv(os.path.join(args.imgs_dir, 'sample_submission.csv')).image_id.values
+
     n_shards = get_n_shards(shards_dir)
     for shard_id in range(n_shards):
         print(shard_id)
 
-    mp.spawn(main, nprocs=args.n_gpus, args=(args, ckpt_args, 0,))
+    shard_id = 0
+    mol_data = MoleculeDataset(args.mode, shard_id, args.imgs_dir, ckpt_args.img_size, rotate=False)
+
+    mp.spawn(main, nprocs=args.n_gpus, args=(args, ckpt_args, shard_id, mol_data,))
