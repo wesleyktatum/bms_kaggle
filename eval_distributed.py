@@ -92,7 +92,7 @@ def main(gpu, args, shard_id):
             img_id_idx = shard_id*mol_data.shard_size+i*args.batch_size+j*args.chunk_size
             decoded = model.module.predict(imgs, search_mode=args.search_mode, width=args.beam_width,
                                            device=DEVICE)
-            for img_id_idx in img_id_idxs:
+            for k, img_id_idx in enumerate(img_id_idxs):
                 pred_inchi = decode_inchi(decoded[k,:], args.ord_dict)
                 img_id = args.img_ids[img_id_idx+k]
                 log_file = open(write_fn, 'a')
