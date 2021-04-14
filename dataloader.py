@@ -42,6 +42,9 @@ class MoleculeDataset(Dataset):
         if mode != 'eval':
             self.inchi_path = os.path.join(source_dir, '{}_shards'.format(self.mode), 'encoded_inchis.npy')
             self.encoded_inchis = np.load(self.inchi_path)
+        else:
+            self.img_id_path = os.path.join(source_dir, '{}_shards'.format(self.mode), 'img_id_shard{}.csv'.format(shard_id))
+            self.img_ids = pd.read_csv(self.img_id_path)
 
     def __getitem__(self, i):
         ### grab image
@@ -88,7 +91,7 @@ class MoleculeDataset(Dataset):
             # log_file.close()
             return img, encoded_inchi, inchi_length
         else:
-            img_idx = i + (self.shard_size*self.shard_id)
+            img_idx = i
             return img, torch.tensor(img_idx).long()
 
     def __len__(self):

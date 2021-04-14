@@ -72,6 +72,7 @@ def main(gpu, args, shard_id):
 
     print('loading shard {}...'.format(shard_id))
     mol_data = MoleculeDataset(args.mode, shard_id, args.imgs_dir, ckpt_args.img_size, rotate=False)
+    img_ids = pd.read_csv(os.path.join(args.imgs_dir, '{}_shards'.format(args.mode), 'img_id_shard{}.csv'.format(shard_id))).image_id.values
 
     data_sampler = torch.utils.data.distributed.DistributedSampler(mol_data,
                                                                    num_replicas=args.n_gpus,
@@ -82,7 +83,7 @@ def main(gpu, args, shard_id):
                                               shuffle=False, num_workers=0,
                                               pin_memory=False, drop_last=False,
                                               sampler=data_sampler)
-    start = perf_counter()
+
     for i, (batch_imgs, batch_img_id_idxs) in enumerate(data_loader):
         if i > 3:
             break
@@ -94,16 +95,11 @@ def main(gpu, args, shard_id):
                                            device=DEVICE)
             for k, img_id_idx in enumerate(img_id_idxs):
                 pred_inchi = decode_inchi(decoded[k,:], args.ord_dict)
-                img_id = args.img_ids[img_id_idx+k]
+                img_id = img_ids[img_id_idx]
                 log_file = open(write_fn, 'a')
                 log_file.write('{}\t{}\n'.format(img_id, pred_inchi))
                 log_file.close()
     del mol_data, data_loader
-
-    end = perf_counter()
-    log_file = open(write_fn, 'a')
-    log_file.write('took {} s to run inference on 1024 samples'.format(round(end-start, 4)))
-    log_file.close()
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -131,8 +127,6 @@ if __name__ == '__main__':
 
     os.makedirs(args.eval_dir, exist_ok=True)
     args.n_gpus = torch.cuda.device_count()
-
-    args.img_ids = pd.read_csv(os.path.join(args.imgs_dir, 'sample_submission.csv')).image_id.values
 
     n_shards = get_n_shards(shards_dir)
     for shard_id in range(n_shards):
