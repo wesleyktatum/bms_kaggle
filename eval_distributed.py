@@ -132,6 +132,8 @@ if __name__ == '__main__':
         print(shard_id)
 
     shard_id = 0
+    print('loading shard {}...'.format(shard_id))
     mol_data = MoleculeDataset(args.mode, shard_id, args.imgs_dir, ckpt_args.img_size, rotate=False)
+    print('crafting spawns...')
 
     mp.spawn(main, nprocs=args.n_gpus, args=(args, ckpt_args, shard_id, mol_data,))
