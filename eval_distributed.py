@@ -27,7 +27,7 @@ DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 def main(gpu, args, shard_id):
     rank = gpu
-    dist.init_process_group(backend='nccl', int_method='env://',
+    dist.init_process_group(backend='nccl', init_method='env://',
                             world_size=args.n_gpus, rank=rank)
     ckpt, ckpt_args, _ = load_model_from_ckpt(args.checkpoint_fn)
 
