@@ -27,6 +27,8 @@ DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 def main(gpu, args, shard_id):
     rank = gpu
+    dist.init_process_group(backend='nccl', int_method='env://',
+                            world_size=args.n_gpus, rank=rank)
     ckpt, ckpt_args, _ = load_model_from_ckpt(args.checkpoint_fn)
 
     if ckpt_args.encoder == 'resnet18':
@@ -115,6 +117,8 @@ if __name__ == '__main__':
     parser.add_argument('--batch_chunks', type=int, default=8)
     parser.add_argument('--n_samples', type=int, default=10000)
     args = parser.parse_args()
+    os.environ['MASTER_ADDR'] = 'localhost'
+    os.environ['MASTER_PORT'] = '12355'
 
     args.mode = 'eval'
     shards_dir = os.path.join(args.imgs_dir, '{}_shards'.format(args.mode))
