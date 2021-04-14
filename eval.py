@@ -85,7 +85,7 @@ def main(args):
                 break
             mol_data = MoleculeDataset(args.mode, shard_id, args.imgs_dir, ckpt_args.img_size, rotate=False)
             data_loader = torch.utils.data.DataLoader(mol_data, batch_size=args.batch_size,
-                                                      shuffle=False, num_workers=n_gpus*4,
+                                                      shuffle=False, num_workers=0,
                                                       pin_memory=False, drop_last=False)
             start = perf_counter()
             for i, batch_imgs in enumerate(data_loader):
