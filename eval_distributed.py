@@ -86,6 +86,8 @@ def main(gpu, args, shard_id):
 
     start = perf_counter()
     for i, (batch_imgs, batch_img_id_idxs) in enumerate(data_loader):
+        if i > 0:
+            break
         batch_imgs = batch_imgs.cuda(non_blocking=True)
         batch_size = batch_imgs.shape[0]
         final_batch = False
@@ -120,8 +122,6 @@ def main(gpu, args, shard_id):
                         log_file.close()
         else:
             for j in range(args.batch_chunks):
-                if j > 0:
-                    break
                 imgs = batch_imgs[j*args.chunk_size:(j+1)*args.chunk_size,:,:,:]
                 img_id_idxs = batch_img_id_idxs[j*args.chunk_size:(j+1)*args.chunk_size]
                 decoded = model.module.predict(imgs, search_mode=args.search_mode, width=args.beam_width,
