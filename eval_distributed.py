@@ -67,6 +67,9 @@ def main(gpu, args, ckpt_args, shard_id, mol_data):
         log_file.write('image_id\tInChI\n')
         log_file.close()
 
+    print('loading shard {}...'.format(shard_id))
+    mol_data = MoleculeDataset(args.mode, shard_id, args.imgs_dir, ckpt_args.img_size, rotate=False)
+
     data_sampler = torch.utils.data.distributed.DistributedSampler(mol_data,
                                                                    num_replicas=args.n_gpus,
                                                                    rank=rank,
@@ -132,8 +135,6 @@ if __name__ == '__main__':
         print(shard_id)
 
     shard_id = 0
-    print('loading shard {}...'.format(shard_id))
-    mol_data = MoleculeDataset(args.mode, shard_id, args.imgs_dir, ckpt_args.img_size, rotate=False)
     print('crafting spawns...')
 
-    mp.spawn(main, nprocs=args.n_gpus, args=(args, ckpt_args, shard_id, mol_data,))
+    mp.spawn(main, nprocs=args.n_gpus, args=(args, ckpt_args, shard_id,))
