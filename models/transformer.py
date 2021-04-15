@@ -80,10 +80,11 @@ class Transformer(nn.Module):
     def two_pass_mixed_predict(self, embedded_imgs, inchis, inchi_mask, alpha_mix):
         ### embed true inchi
         true_inchis = self.inchi_embed(inchis)
+        print(true_inchis.shape)
 
         ### get teacher-forced model prediction
         if alpha_mix == 1.:
-            x= self.decoder(true_inchis, embedded_imgs, inchi_mask)
+            x = self.decoder(true_inchis, embedded_imgs, inchi_mask)
             preds = self.generator(x)
         else:
             with torch.no_grad():
@@ -91,16 +92,22 @@ class Transformer(nn.Module):
                 x = self.decoder(true_inchis, embedded_imgs, inchi_mask)
                 tf_preds = self.generator(x).detach()
                 tf_preds = F.softmax(tf_preds, dim=-1)
-                tf_seq = torch.argmax(tf_preds, dim=-1)
-                tf_inchis[:,1:] = tf_seq[:,:-1]
-
-                ### embed teacher-forced prediction and take mean of embeddings
-                tf_inchis = self.inchi_embed(tf_inchis)
-                mixed_inchis = alpha_mix * true_inchis + (1 - alpha_mix) * tf_inchis
-                del true_inchis, tf_inchis, tf_preds, tf_seq
+                top_word_probs, top_words = torch.topk(tf_preds, k=5, dim=-1)
+                for i in range(top_words.shape[1]-1):
+                    tf = (torch.rand(1).item() < alpha_mix)
+                    if tf:
+                        pass
+                    else:
+                        words = top_words[:,i,:]
+                        probs = top_word_probs[:,i,:]
+                        probs = probs / probs.sum()
+                        embedded_words = self.inchi_embed(words)
+                        avg_embedded = embedded_words * probs.unsqueeze(-1)
+                        avg_embedded = avg_embedded.sum(dim=1)
+                        true_inchis[:,i+1,:] = avg_embedded
 
             ### send through decoder and generate predictions
-            x = self.decoder(mixed_inchis, embedded_imgs, inchi_mask)
+            x = self.decoder(true_inchis, embedded_imgs, inchi_mask)
             preds = self.generator(x)
         return preds
 
@@ -302,6 +309,27 @@ class PositionalEncoding(nn.Module):
 
     def forward(self, x):
         x += self.pe[:, :x.size(1)]
+        return self.dropout(x)
+
+class PositionalEncoding2d(nn.Module):
+    def __init__(self, d_model, dropout, h=8, w=8):
+        super().__init__()
+        self.dropout = nn.Dropout(p=dropout)
+
+        pe = torch.zeros(d_model, h, w)
+        d_model = int(d_model / 2)
+        div_term = torch.exp(torch.arange(0., d_model, 2) * -(math.log(10000.0) / d_model))
+        pos_w = torch.arange(0., w).unsqueeze(1)
+        pos_h = torch.arange(0., h).unsqueeze(1)
+        pe[0:d_model:2, :, :] = torch.sin(pos_w * div_term).transpose(0, 1).unsqueeze(1).repeat(1, height, 1)
+        pe[1:d_model:2, :, :] = torch.cos(pos_w * div_term).transpose(0, 1).unsqueeze(1).repeat(1, height, 1)
+        pe[d_model::2, :, :] = torch.sin(pos_h * div_term).transpose(0, 1).unsqueeze(2).repeat(1, 1, width)
+        pe[d_model + 1::2, :, :] = torch.cos(pos_h * div_term).transpose(0, 1).unsqueeze(2).repeat(1, 1, width)
+        pe.requires_grad = False
+        self.register_buffer('pe', pe)
+
+    def forward(self, x):
+        x += self.pe
         return self.dropout(x)
 
 ############## Utility Layers ####################
