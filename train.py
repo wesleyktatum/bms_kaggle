@@ -81,7 +81,7 @@ def main(args):
         already_wrote = False
     log_file = open(args.log_lev_fn, 'a')
     if not already_wrote:
-        log_file.write('epoch\timage_id\tlev_score\n')
+        log_file.write('epoch,image_id,lev_score\n')
     log_file.close()
     if args.make_grad_gif:
         os.makedirs('{}_gif'.format(args.model_name), exist_ok=True)
@@ -420,7 +420,7 @@ def lev_validate(val_loader, model, epoch, args, ord_dict):
                 lev_dist = lev.distance(pred_inchi, true_inchi)
                 img_id = img_ids[img_id_idx+k]
                 log_file = open(args.log_lev_fn, 'a')
-                log_file.write('{}\t{}\t{}\n'.format(epoch, img_id, lev_dist))
+                log_file.write('{},{},{}\n'.format(epoch, img_id, lev_dist))
                 batch_lev_dists.append(lev_dist)
         n_evaluated += args.batch_size
         if n_evaluated > n_samples:
