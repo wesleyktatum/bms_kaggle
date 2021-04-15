@@ -147,12 +147,6 @@ def main(args):
                     break
                 lev_dists.append(np.mean(batch_lev_dists))
 
-    end = perf_counter()
-    print('Took {} s to run inference on 1024 samples'.format(round(end-start, 4)))
-    if args.mode != 'eval':
-        avg_lev_dist = np.mean(lev_dists)
-        print('Average Levenshtein Distance ({}) - {}'.format(args.mode, avg_lev_dist))
-
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--imgs_dir', type=str, default='/gscratch/pfaendtner/orion/mol_translation/data')
@@ -167,7 +161,6 @@ if __name__ == '__main__':
     parser.add_argument('--batch_size', type=int, default=256)
     parser.add_argument('--batch_chunks', type=int, default=8)
     parser.add_argument('--tag', type=str, default='')
-
     parser.add_argument('--n_samples', type=int, default=10000)
 
     args = parser.parse_args()
