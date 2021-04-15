@@ -128,7 +128,7 @@ def main(args):
                         probs = False
                         encoded_inchis = encoded_inchis.cpu()
                     else:
-                        preds, _, _ = model(imgs, encoded_inchis, inchi_length)
+                        preds, _, _ = model(imgs, encoded_inchis, inchi_lengths)
                         decoded = preds.cpu()
                         probs = True
                         encoded_inchis = encoded_inchis.cpu()
