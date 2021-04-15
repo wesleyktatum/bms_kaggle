@@ -60,7 +60,7 @@ def main(args):
     model.eval()
     n_gpus = torch.cuda.device_count()
 
-    write_fn = os.path.join(args.eval_dir, '{}_{}_{}_predictions.txt'.format(args.checkpoint_fn.split('/')[-1].split('.')[0], args.mode, args.search_mode))
+    write_fn = os.path.join(args.eval_dir, '{}_{}_{}_predictions_notf.txt'.format(args.checkpoint_fn.split('/')[-1].split('.')[0], args.mode, args.search_mode))
     if args.mode == 'eval':
         img_ids = pd.read_csv(os.path.join(args.imgs_dir, 'sample_submission.csv')).image_id.values
         log_file = open(write_fn, 'a')
@@ -107,23 +107,33 @@ def main(args):
             if shard_id > 0:
                 break
             mol_data = MoleculeDataset(args.mode, shard_id, args.imgs_dir, ckpt_args.img_size,
-                                       prerotated=False, rotate=False)
+                                       prerotated=ckpt_args.prerotated, rotate=ckpt_args.rotate)
             data_loader = torch.utils.data.DataLoader(mol_data, batch_size=args.batch_size,
                                                       shuffle=False, num_workers=0,
                                                       pin_memory=False, drop_last=False)
-            for i, (batch_imgs, batch_encoded_inchis, _) in enumerate(data_loader):
+            for i, (batch_imgs, batch_encoded_inchis, batch_inchi_lengths) in enumerate(data_loader):
                 batch_imgs = batch_imgs.to(DEVICE)
-                batch_encoded_inchis = batch_encoded_inchis
+                batch_encoded_inchis = batch_encoded_inchis.to(DEVICE)
+                batch_inchi_lengths = batch_inchi_lengths.unsqueeze(1).to(DEVICE)
                 batch_lev_dists = []
                 for j in range(args.batch_chunks):
                     imgs = batch_imgs[j*args.chunk_size:(j+1)*args.chunk_size,:,:,:]
                     img_id_idx = shard_id*mol_data.shard_size+i*args.batch_size+j*args.chunk_size
                     encoded_inchis = batch_encoded_inchis[j*args.chunk_size:(j+1)*args.chunk_size,:]
+                    inchi_lengths = batch_inchi_lengths[j*args.chunk_size:(j+1)*args.chunk_size,:]
 
-                    decoded = model.predict(imgs, search_mode=args.search_mode, width=args.beam_width,
-                                            device=DEVICE).cpu()
+                    if not args.teacher_force:
+                        decoded = model.predict(imgs, search_mode=args.search_mode, width=args.beam_width,
+                                                device=DEVICE).cpu()
+                        probs = False
+                        encoded_inchis = encoded_inchis.cpu()
+                    else:
+                        preds, _, _ = model(imgs, encoded_inchis, inchi_length)
+                        decoded = preds.cpu()
+                        probs = True
+                        encoded_inchis = encoded_inchis.cpu()
                     for k in range(args.chunk_size):
-                        pred_inchi = decode_inchi(decoded[k,:], ord_dict)
+                        pred_inchi = decode_inchi(decoded[k,:], ord_dict, probs=probs)
                         true_inchi = decode_inchi(encoded_inchis[k,1:], ord_dict)
                         lev_dist = lev.distance(pred_inchi, true_inchi)
                         batch_lev_dists.append(lev_dist)
@@ -153,8 +163,10 @@ if __name__ == '__main__':
     parser.add_argument('--beam_width', type=int, default=4)
     parser.add_argument('--checkpoint_fn', type=str, default=None)
     parser.add_argument('--write_predictions', default=False, action='store_true')
+    parser.add_argument('--teacher_force', default=False, action='store_true')
     parser.add_argument('--batch_size', type=int, default=256)
     parser.add_argument('--batch_chunks', type=int, default=8)
+
     parser.add_argument('--n_samples', type=int, default=10000)
 
     args = parser.parse_args()
