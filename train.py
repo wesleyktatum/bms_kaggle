@@ -32,12 +32,14 @@ def main(args):
             ckpt, _, _ = load_model_from_ckpt(args.checkpoint_fn)
             start_epoch = 0
             args.best_val_loss = 1e5
+            args.best_lev_score = 1e5
         elif args.continuation:
             ckpt, args, start_epoch = load_model_from_ckpt(args.checkpoint_fn)
     else:
         ckpt = None
         start_epoch = 0
         args.best_val_loss = 1e5
+        args.best_lev_score = 1e5
 
     train_dir = os.path.join(args.imgs_dir, 'train_shards')
     val_dir = os.path.join(args.imgs_dir, 'val_shards')
@@ -55,8 +57,10 @@ def main(args):
     os.makedirs(args.save_dir, exist_ok=True)
     if args.model_name is not None:
         args.log_fn = '{}/log{}.txt'.format(args.log_dir, '_'+args.model_name)
+        args.log_lev_fn = '{}/lev{}.txt'.format(args.log_dir, '_'+args.model_name)
     else:
         args.log_fn = '{}/log.txt'.format(args.log_dir)
+        args.log_lev_fn = '{}/lev.txt'.format(args.log_dir)
     try:
         f = open(args.log_fn, 'r')
         f.close()
@@ -66,6 +70,16 @@ def main(args):
     log_file = open(args.log_fn, 'a')
     if not already_wrote:
         log_file.write('epoch,batch_idx,data_type,loss,enc_grad_norm,dec_grad_norm,run_time\n')
+    log_file.close()
+    try:
+        f = open(args.log_lev_fn, 'r')
+        f.close()
+        already_wrote = True
+    except FileNotFoundError:
+        already_wrote = False
+    log_file = open(args.log_lev_fn, 'a')
+    if not already_wrote:
+        log_file.write('epoch\timage_id\tlev_score\n')
     log_file.close()
     if args.make_grad_gif:
         os.makedirs('{}_gif'.format(args.model_name), exist_ok=True)
@@ -146,22 +160,32 @@ def main(args):
         train_loss = np.mean(train_losses)
 
         mode = 'val'
-        val_shard_ids = np.random.choice(np.arange(n_val_shards), size=1,
-                                         replace=False)
-        val_losses = []
-        batch_counter = 0
-        for shard_id in val_shard_ids:
-            val_train = MoleculeDataset(mode, shard_id, args.imgs_dir, args.img_size,
-                                        args.prerotated, args.rotate)
-            val_loader = torch.utils.data.DataLoader(val_train, batch_size=args.batch_size,
-                                                     shuffle=True, num_workers=0,
-                                                     pin_memory=False, drop_last=True)
-            val_loss, batch_counter = validate(val_loader, model, epoch, args,
-                                               batch_counter=batch_counter)
-            val_losses.append(val_loss)
-            del val_train, val_loader
-        val_loss = np.mean(val_losses)
-        print('Epoch - {} Train - {}, Val - {}'.format(epoch, train_loss, val_loss))
+        ############################# LOSS VALIDATION ##############################
+        # val_shard_ids = np.random.choice(np.arange(n_val_shards), size=1,
+        #                                  replace=False)
+        # val_losses = []
+        # batch_counter = 0
+        # for shard_id in val_shard_ids:
+        #     val_train = MoleculeDataset(mode, shard_id, args.imgs_dir, args.img_size,
+        #                                 args.prerotated, args.rotate)
+        #     val_loader = torch.utils.data.DataLoader(val_train, batch_size=args.batch_size,
+        #                                              shuffle=True, num_workers=0,
+        #                                              pin_memory=False, drop_last=True)
+        #     val_loss, batch_counter = validate(val_loader, model, epoch, args,
+        #                                        batch_counter=batch_counter)
+        #     val_losses.append(val_loss)
+        #     del val_train, val_loader
+        # val_loss = np.mean(val_losses)
+        # print('Epoch - {} Train - {}, Val - {}'.format(epoch, train_loss, val_loss))
+
+        ############################## LEV VALIDATION ##############################
+        val_data = MoleculeDataset(mode, 0, args.imgs_dir, args.img_size, args.prerotated,
+                                   args.rotate)
+        val_loader = torch.utils.data.DataLoader(val_data, batch_size=args.batch_size,
+                                                 shuffle=False, num_workers=0,
+                                                 pin_memory=False, drop_last=True)
+        lev_score = lev_validate(val_loader, model, epoch, args, ord_dict)
+        del val_data, val_loader
 
         if args.scheduler != 'none':
             encoder_scheduler.step()
@@ -178,8 +202,8 @@ def main(args):
             save(model, optimizers, schedulers, args, epoch+1, save_fn)
 
         if args.save_best:
-            if val_loss < args.best_val_loss:
-                args.best_val_loss = val_loss
+            if lev_score < args.best_lev_score:
+                args.best_lev_score = lev_score
                 if args.model_name is not None:
                     save_fn = os.path.join(args.save_dir, 'model_'+args.model_name+'_best.ckpt')
                 else:
@@ -369,6 +393,39 @@ def validate(val_loader, model, epoch, args, batch_counter=0):
 
     val_loss = np.mean(losses)
     return val_loss, batch_counter
+
+def lev_validate(val_loader, model, epoch, args, ord_dict):
+    model.eval()
+    img_ids = pd.read_csv(os.path.join(args.data_dir, '{}.csv'.format(args.mode))).image_id.values
+    n_samples = 10000
+    batch_chunks = args.batch_chunks * 2
+    chunk_size = args.batch_size // batch_chunks
+
+    lev_dists = []
+    n_evaluated = 0
+    for i, (batch_imgs, batch_encoded_inchis, batch_inchi_lengths) in enumerate(val_loader):
+        batch_imgs = batch_imgs.to(DEVICE)
+        batch_lev_dists = []
+        for j in range(batch_chunks):
+            imgs = batch_imgs[j*chunk_size:(j+1)*chunk_size,:,:,:]
+            img_id_idx = i*args.batch_size+j*chunk_size
+            encoded_inchis = batch_encoded_inchis[j*chunk_size:(j+1)*chunk_size,:]
+
+            decoded = model.predict(imgs, search_mode='greedy', width=1, device=DEVICE).cpu()
+            for k in range(chunk_size):
+                pred_inchi = decode_inchi(decoded[k,:], ord_dict, probs=False)
+                true_inchi = decode_inchi(encoded_inchis[k,1:], ord_dict)
+                lev_dist = lev.distance(pred_inchi, true_inchi)
+                img_id = img_ids[img_id_idx+k]
+                log_file = open(args.log_lev_fn, 'a')
+                log_file.write('{}\t{}\t{}\n'.format(epoch, img_id, lev_dist))
+                batch_lev_dists.append(lev_dist)
+        n_evaluated += args.batch_size
+        if n_evaluated > n_samples:
+            break
+        lev_dists.append(np.mean(batch_lev_dists))
+
+    return np.mean(lev_dists)
 
 def save(model, optimizers, schedulers, args, epoch, save_fn):
     enc_optimizer, dec_optimizer = optimizers
