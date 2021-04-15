@@ -60,7 +60,7 @@ def main(args):
     model.eval()
     n_gpus = torch.cuda.device_count()
 
-    write_fn = os.path.join(args.eval_dir, '{}_{}_{}_predictions_notf.txt'.format(args.checkpoint_fn.split('/')[-1].split('.')[0], args.mode, args.search_mode))
+    write_fn = os.path.join(args.eval_dir, '{}_{}_{}_predictions{}.txt'.format(args.checkpoint_fn.split('/')[-1].split('.')[0], args.mode, args.search_mode, args.tag))
     if args.mode == 'eval':
         img_ids = pd.read_csv(os.path.join(args.imgs_dir, 'sample_submission.csv')).image_id.values
         log_file = open(write_fn, 'a')
@@ -166,6 +166,7 @@ if __name__ == '__main__':
     parser.add_argument('--teacher_force', default=False, action='store_true')
     parser.add_argument('--batch_size', type=int, default=256)
     parser.add_argument('--batch_chunks', type=int, default=8)
+    parser.add_argument('--tag', type=string, default='')
 
     parser.add_argument('--n_samples', type=int, default=10000)
 
