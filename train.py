@@ -396,7 +396,7 @@ def validate(val_loader, model, epoch, args, batch_counter=0):
 
 def lev_validate(val_loader, model, epoch, args, ord_dict):
     model.eval()
-    img_ids = pd.read_csv(os.path.join(args.data_dir, '{}.csv'.format(args.mode))).image_id.values
+    img_ids = pd.read_csv(os.path.join(args.data_dir, 'val.csv')).image_id.values
     n_samples = 10000
     batch_chunks = args.batch_chunks * 2
     chunk_size = args.batch_size // batch_chunks
