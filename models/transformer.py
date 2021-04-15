@@ -136,7 +136,7 @@ class Transformer(nn.Module):
             decoded_mask = subsequent_mask(decoded.size(1), device).long()
             out = self.inchi_embed(decoded)
             out = self.decoder(Variable(out), imgs, decoded_mask)
-            probs = F.log_softmax(self.generator(out[:,i,:]), dim=-1).view(batch_size, width, -1)
+            probs = F.softmax(self.generator(out[:,i,:]), dim=-1).view(batch_size, width, -1)
             topk_probs, topk_idxs = torch.topk(probs, k=width)
             cumk_probs = topk_probs * cum_probs
             sorted_idxs = torch.argsort(cumk_probs.view(batch_size, width**2, -1), dim=1, descending=True)

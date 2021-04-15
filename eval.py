@@ -107,7 +107,7 @@ def main(args):
             if shard_id > 0:
                 break
             mol_data = MoleculeDataset(args.mode, shard_id, args.imgs_dir, ckpt_args.img_size,
-                                       ckpt_args.prerotated, ckpt_args.rotate)
+                                       prerotated=False, rotate=False)
             data_loader = torch.utils.data.DataLoader(mol_data, batch_size=args.batch_size,
                                                       shuffle=False, num_workers=0,
                                                       pin_memory=False, drop_last=False)
