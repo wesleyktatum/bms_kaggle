@@ -166,7 +166,7 @@ if __name__ == '__main__':
     parser.add_argument('--teacher_force', default=False, action='store_true')
     parser.add_argument('--batch_size', type=int, default=256)
     parser.add_argument('--batch_chunks', type=int, default=8)
-    parser.add_argument('--tag', type=string, default='')
+    parser.add_argument('--tag', type=str, default='')
 
     parser.add_argument('--n_samples', type=int, default=10000)
 
