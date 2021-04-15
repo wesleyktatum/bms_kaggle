@@ -80,7 +80,6 @@ class Transformer(nn.Module):
     def two_pass_mixed_predict(self, embedded_imgs, inchis, inchi_mask, alpha_mix):
         ### embed true inchi
         true_inchis = self.inchi_embed(inchis)
-        print(true_inchis.shape)
 
         ### get teacher-forced model prediction
         if alpha_mix == 1.:
