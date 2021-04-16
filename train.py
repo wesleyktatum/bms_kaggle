@@ -181,13 +181,23 @@ def main(args):
         # print('Epoch - {} Train - {}, Val - {}'.format(epoch, train_loss, val_loss))
 
         ############################## LEV VALIDATION ##############################
-        val_data = MoleculeDataset(mode, 0, args.imgs_dir, args.img_size, args.prerotated,
-                                   args.rotate)
-        val_loader = torch.utils.data.DataLoader(val_data, batch_size=args.batch_size,
-                                                 shuffle=False, num_workers=0,
-                                                 pin_memory=False, drop_last=True)
-        lev_score = lev_validate(val_loader, model, epoch, args, ord_dict)
-        del val_data, val_loader
+        if (epoch+1) % 5 == 0:
+            val_data = MoleculeDataset(mode, 0, args.imgs_dir, args.img_size, args.prerotated,
+                                       args.rotate)
+            val_loader = torch.utils.data.DataLoader(val_data, batch_size=args.batch_size,
+                                                     shuffle=False, num_workers=0,
+                                                     pin_memory=False, drop_last=True)
+            lev_score = lev_validate(val_loader, model, epoch, args, ord_dict)
+            del val_data, val_loader
+
+            if args.save_best:
+                if lev_score < args.best_lev_score:
+                    args.best_lev_score = lev_score
+                    if args.model_name is not None:
+                        save_fn = os.path.join(args.save_dir, 'model_'+args.model_name+'_best.ckpt')
+                    else:
+                        save_fn = os.path.join(args.save_dir, 'model_best.ckpt')
+                    save(model, optimizers, schedulers, args, epoch+1, save_fn)
 
         if args.scheduler != 'none':
             encoder_scheduler.step()
@@ -202,15 +212,6 @@ def main(args):
             else:
                 save_fn = os.path.join(args.save_dir, 'model_'+epoch_str+'.ckpt')
             save(model, optimizers, schedulers, args, epoch+1, save_fn)
-
-        if args.save_best:
-            if lev_score < args.best_lev_score:
-                args.best_lev_score = lev_score
-                if args.model_name is not None:
-                    save_fn = os.path.join(args.save_dir, 'model_'+args.model_name+'_best.ckpt')
-                else:
-                    save_fn = os.path.join(args.save_dir, 'model_best.ckpt')
-                save(model, optimizers, schedulers, args, epoch+1, save_fn)
 
     if args.make_grad_gif:
         imageio.mimsave('{}_grads.gif'.format(args.model_name), args.images)
@@ -399,7 +400,7 @@ def validate(val_loader, model, epoch, args, batch_counter=0):
 def lev_validate(val_loader, model, epoch, args, ord_dict):
     model.eval()
     img_ids = pd.read_csv(os.path.join(args.data_dir, 'val.csv')).image_id.values
-    n_samples = 10000
+    n_samples = 5000
     batch_chunks = args.batch_chunks * 2
     chunk_size = args.batch_size // batch_chunks
 
