@@ -19,7 +19,7 @@ class MoleculeDataset(Dataset):
     PyTorch Dataset class to load molecular images and InChIs
     """
     def __init__(self, mode, shard_id, source_dir, img_size, prerotated=False,
-                 rotate=True, p=0.5):
+                 unrotated=False, rotate=True, p=0.5):
         self.mode = mode
         self.shard_id = shard_id
         if self.mode == 'train' or self.mode == 'eval':
@@ -33,8 +33,10 @@ class MoleculeDataset(Dataset):
         else:
             self.rotate = rotate
         self.p = p
-        if self.prerotated:
+        if self.prerotated and mode != 'eval':
             self.sparse_path = os.path.join(source_dir, '{}_shards/prerotated'.format(self.mode), 'shard{}.npz'.format(shard_id))
+        elif self.unrotated and mode == 'eval':
+            self.sparse_path = os.path.join(source_dir, '{}_shards/unrotated'.format(self.mode), 'shard{}.npz'.format(shard_id))
         else:
             self.sparse_path = os.path.join(source_dir, '{}_shards'.format(self.mode), 'shard{}.npz'.format(shard_id))
         self.sparse_imgs = sparse.load_npz(self.sparse_path)

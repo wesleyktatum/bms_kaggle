@@ -58,7 +58,10 @@ def main(gpu, args, shard_id):
     model = nn.parallel.DistributedDataParallel(model, device_ids=[gpu])
     model.eval()
 
-    write_fn = os.path.join(args.eval_dir, '{}_{}_{}_predictions{}.txt'.format(args.checkpoint_fn.split('/')[-1].split('.')[0], args.mode, args.search_mode, gpu))
+    if args.unrotated:
+        write_fn = os.path.join(args.write_dir, '{}_{}_{}_unrotated_predictions{}.txt'.format(args.checkpoint_fn.split('/')[-1].split('.')[0], args.mode, args.search_mode, gpu))
+    else:
+        write_fn = os.path.join(args.write_dir, '{}_{}_{}_rotated_predictions{}.txt'.format(args.checkpoint_fn.split('/')[-1].split('.')[0], args.mode, args.search_mode, gpu))
     try:
         f = open(write_fn, 'r')
         f.close()
@@ -71,7 +74,7 @@ def main(gpu, args, shard_id):
         log_file.close()
 
     print('loading shard {}...'.format(shard_id))
-    mol_data = MoleculeDataset(args.mode, shard_id, args.imgs_dir, ckpt_args.img_size, rotate=False)
+    mol_data = MoleculeDataset(args.mode, shard_id, args.imgs_dir, ckpt_args.img_size, unrotated=args.unrotated, rotate=False)
     img_ids = pd.read_csv(os.path.join(args.imgs_dir, '{}_shards'.format(args.mode), 'img_id_shard{}.csv'.format(shard_id))).image_id.values
 
     data_sampler = torch.utils.data.distributed.DistributedSampler(mol_data,
@@ -134,11 +137,6 @@ def main(gpu, args, shard_id):
                     log_file.close()
     del mol_data, data_loader
 
-    end = perf_counter()
-    log_file = open(write_fn, 'a')
-    log_file.write('took {} s to infer 256 samples'.format(end - start))
-    log_file.close()
-
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--imgs_dir', type=str, default='/gscratch/pfaendtner/orion/mol_translation/data')
@@ -150,6 +148,7 @@ if __name__ == '__main__':
     parser.add_argument('--batch_size', type=int, default=256)
     parser.add_argument('--batch_chunks', type=int, default=8)
     parser.add_argument('--n_samples', type=int, default=10000)
+    parser.add_argument('--unrotated', default=False, action='store_true')
     args = parser.parse_args()
     os.environ['MASTER_ADDR'] = 'localhost'
     os.environ['MASTER_PORT'] = '12355'
@@ -165,6 +164,12 @@ if __name__ == '__main__':
 
     os.makedirs(args.eval_dir, exist_ok=True)
     args.n_gpus = torch.cuda.device_count()
+
+    if args.unrotated:
+        args.write_dir = os.path.join(args.eval_dir, '{}_{}_{}_unrotated_predictions/'.format(args.checkpoint_fn.split('/')[-1].split('.')[0], args.mode, args.search_mode))
+    else:
+        args.write_dir = os.path.join(args.eval_dir, '{}_{}_{}_rotated_predictions/'.format(args.checkpoint_fn.split('/')[-1].split('.')[0], args.mode, args.search_mode))
+    os.makedirs(args.write_dir, exist_ok=True)
 
     n_shards = get_n_shards(shards_dir)
     for shard_id in range(n_shards):
