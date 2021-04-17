@@ -87,10 +87,7 @@ def main(gpu, args, shard_id):
                                               pin_memory=False, drop_last=False,
                                               sampler=data_sampler)
 
-    start = perf_counter()
     for i, (batch_imgs, batch_img_id_idxs) in enumerate(data_loader):
-        if i > 0:
-            break
         batch_imgs = batch_imgs.cuda(non_blocking=True)
         batch_size = batch_imgs.shape[0]
         final_batch = False
@@ -176,4 +173,4 @@ if __name__ == '__main__':
         print(shard_id)
         print('crafting spawns...')
 
-    mp.spawn(main, nprocs=args.n_gpus, args=(args, 0,))
+        mp.spawn(main, nprocs=args.n_gpus, args=(args, 0,))
