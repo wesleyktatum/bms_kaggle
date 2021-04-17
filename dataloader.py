@@ -28,6 +28,7 @@ class MoleculeDataset(Dataset):
             self.shard_size = 25000
         self.img_size = img_size
         self.prerotated = prerotated
+        self.unrotated = unrotated
         if self.prerotated:
             self.rotate = False
         else:
