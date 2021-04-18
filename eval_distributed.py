@@ -173,4 +173,4 @@ if __name__ == '__main__':
         print(shard_id)
         print('crafting spawns...')
 
-        mp.spawn(main, nprocs=args.n_gpus, args=(args, 0,))
+        mp.spawn(main, nprocs=args.n_gpus, args=(args, shard_id,))
