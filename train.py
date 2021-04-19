@@ -36,7 +36,11 @@ def main(args):
             args.best_val_loss = 1e5
             args.best_lev_score = 1e5
         elif args.continuation:
+            mix_warmup = args.mix_warmup
+            alpha_init = args.alpha_init
             ckpt, args, start_epoch = load_model_from_ckpt(args.checkpoint_fn)
+            args.mix_warmup = mix_warmup
+            args.alpha_init = alpha_init
     else:
         ckpt = None
         start_epoch = 0
@@ -135,7 +139,7 @@ def main(args):
     schedulers = [encoder_scheduler, decoder_scheduler]
 
     if not args.teacher_force:
-        args.mix_scheduler = MixScheduler(warmup_steps=args.mix_warmup)
+        args.mix_scheduler = MixScheduler(alpha_init=args.alpha_init, warmup_steps=args.mix_warmup)
     else:
         args.mix_scheduler = None
 
@@ -481,6 +485,7 @@ if __name__ == '__main__':
                         default='cosine_annealing')
     parser.add_argument('--teacher_force', default=False, action='store_true')
     parser.add_argument('--mix_warmup', type=int, default=35000)
+    parser.add_argument('--alpha_init', type=float, default=1.)
     parser.add_argument('--n_decoder_layers', type=int, default=3)
     parser.add_argument('--make_grad_gif', default=False, action='store_true')
 
