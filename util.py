@@ -173,7 +173,7 @@ class MixScheduler:
         if self.n_steps < self.warmup_steps:
             self.n_steps += 1
         else:
-            self.alpha -= ((self.alpha_init - self.alpha_fin) * (self.step_rate / 100))
+            self.alpha -= ((1. - self.alpha_fin) * (self.step_rate / 100))
             if self.alpha <= self.alpha_fin:
                 self.alpha = self.alpha_fin
             self.n_steps += 1
