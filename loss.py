@@ -7,7 +7,7 @@ def ce_loss(targets, preds, weights):
     return BCE
 
 def focal_loss(targets, preds, weights, gamma=2):
-    ce_loss = F.cross_entropy(preds, targets, reduction='mean', weight=weights)
+    ce_loss = F.cross_entropy(preds, targets, reduction='none', weight=weights)
     pt = torch.exp(-ce_loss)
-    focal_loss = ((1 - pt) ** gamma * ce_loss).mean()
+    focal_loss = ((1 - pt)**gamma * ce_loss).mean()
     return focal_loss
