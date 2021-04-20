@@ -8,7 +8,7 @@ import numpy as np
 import pandas as pd
 
 from util import *
-from loss import ce_loss
+from loss import ce_loss, focal_loss
 from dataloader import MoleculeDataset
 from models.sasa import ResNet26, ResNet38, ResNet50
 from models.axial import axial18s, axial18srpe, axial26s, axial50s, axial50m, axial50l
@@ -115,6 +115,11 @@ def main(args):
     if ckpt is not None:
         model.load_state_dict(ckpt['model_state_dict'])
     model = model.to(DEVICE)
+
+    if args.loss_func == 'ce_loss':
+        args.loss_func = ce_loss
+    elif args.loss_func == 'focal_loss':
+        args.loss_func = focal_loss
 
     encoder_optimizer = torch.optim.Adam(params=encoder.parameters(), lr=args.encoder_lr,
                                          weight_decay=1e-6)
@@ -273,7 +278,7 @@ def train(train_loader, model, optimizers, epoch, args, batch_counter=0):
             # postprocess_times.append(postprocess_end - postprocess_start)
 
             # calc_loss_start = perf_counter()
-            loss = ce_loss(targets, preds, args.char_weights)
+            loss = args.loss_func(targets, preds, args.char_weights)
             # calc_loss_end = perf_counter()
             # calc_loss_times.append(calc_loss_end - calc_loss_start)
 
@@ -375,7 +380,7 @@ def validate(val_loader, model, epoch, args, batch_counter=0):
                 preds = pack_padded_sequence(preds, decode_lengths, batch_first=True).data
                 targets = pack_padded_sequence(targets, decode_lengths, batch_first=True).data
 
-                loss = ce_loss(targets, preds, args.char_weights)
+                loss = args.loss_func(targets, preds, args.char_weights)
 
                 avg_losses.append(loss.item())
 
@@ -483,6 +488,7 @@ if __name__ == '__main__':
                         default='trans512_4x')
     parser.add_argument('--scheduler', choices=['cosine_annealing', 'none'],
                         default='cosine_annealing')
+    parser.add_argument('--loss_func', choices=['ce_loss', 'focal_loss'], default='ce_loss')
     parser.add_argument('--teacher_force', default=False, action='store_true')
     parser.add_argument('--mix_warmup', type=int, default=35000)
     parser.add_argument('--alpha_init', type=float, default=1.)
