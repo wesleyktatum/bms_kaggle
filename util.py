@@ -13,13 +13,6 @@ from torch.optim.lr_scheduler import CosineAnnealingLR
 from skimage import feature, filters, morphology
 from sklearn.preprocessing import MinMaxScaler, StandardScaler
 
-from models.sasa import ResNet26, ResNet38, ResNet50
-from models.axial import axial18s, axial18srpe, axial26s, axial50s, axial50m, axial50l
-from models.resnet import resnet18, resnet34, resnet50
-from models.bilstm import biLSTM512
-from models.transformer import trans128_4x, trans256_4x, trans512_4x
-from models.caption import CaptionModel
-
 ########################################################
 ############# PROCESSING FUNCTIONS #####################
 ########################################################
