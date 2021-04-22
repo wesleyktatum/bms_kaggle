@@ -179,6 +179,7 @@ class MixScheduler:
 ########################################################
 
 def invert_and_normalize(img):
+    img[img >= 245] = 255
     new_im = (255 - img) / 255
     return new_im
 
