@@ -9,7 +9,7 @@ from torch.autograd import Variable
 
 class Transformer(nn.Module):
     def __init__(self, N, d_dec, d_ff, vocab_size, device, d_enc=512, dropout=0.1,
-                 teacher_force=False):
+                 teacher_force=False, legacy=False):
         super().__init__()
         self.N = N
         self.d_dec = d_dec
@@ -18,6 +18,7 @@ class Transformer(nn.Module):
         self.d_enc = d_enc
         self.dropout = dropout
         self.teacher_force = teacher_force
+        self.legacy = legacy
         self.device = device
         self.n_pix = 64
         self.tgt_length = 350
@@ -30,9 +31,12 @@ class Transformer(nn.Module):
         self.ff = PositionwiseFeedForward(self.d_dec, self.d_ff, self.dropout)
         self.img_enc_to_dec = nn.Linear(self.d_enc, self.d_dec)
         self.img_projection = nn.Linear(self.n_pix, self.tgt_length)
-        self.pos_embed = PositionalEncoding(self.d_dec, self.dropout)
+        if self.legacy:
+            self.pos_embed = PositionalEncoding(self.d_dec, self.dropout)
+        else:
+            self.pos_embed = PositionalEncoding2d(self.d_dec, self.dropout)
         self.voc_embed = Embeddings(self.d_dec, self.vocab_size)
-        self.inchi_embed = nn.Sequential(self.voc_embed, c(self.pos_embed))
+        self.inchi_embed = nn.Sequential(self.voc_embed, PositionalEncoding(self.d_dec, self.dropout))
         self.decoder = Decoder(AttentionLayer(self.d_dec, c(self.attn), c(self.attn),
                                c(self.ff), self.dropout), N)
         self.generator = Generator(self.d_dec, self.vocab_size)
@@ -50,12 +54,21 @@ class Transformer(nn.Module):
         decode_lengths = (inchi_lengths - 1).tolist()
 
         ### transform images for decoder
-        imgs = imgs.contiguous().view(batch_size, self.n_pix, -1)
-        imgs = F.relu(self.img_enc_to_dec(imgs))
-        imgs = imgs.permute(0, 2, 1)
-        imgs = F.relu(self.img_projection(imgs))
-        imgs = imgs.permute(0, 2, 1)
-        imgs = self.pos_embed(imgs)
+        if self.legacy: ### 1d positional embedding after image transforms
+            imgs = imgs.contiguous().view(batch_size, self.n_pix, -1)
+            imgs = F.relu(self.img_enc_to_dec(imgs))
+            imgs = imgs.permute(0, 2, 1)
+            imgs = F.relu(self.img_projection(imgs))
+            imgs = imgs.permute(0, 2, 1)
+            imgs = self.pos_embed(imgs)
+
+        else: ### 2d positional embedding before image transforms
+            imgs = self.pos_embed(imgs)
+            imgs = imgs.contiguous().view(batch_size, self.n_pix, -1)
+            imgs = F.relu(self.img_enc_to_dec(imgs))
+            imgs = imgs.permute(0, 2, 1)
+            imgs = F.relu(self.img_projection(imgs))
+            imgs = imgs.permute(0, 2, 1)
 
         ### transform inchis for decoder
         inchis = encoded_inchis[:,:-1]
@@ -320,10 +333,11 @@ class PositionalEncoding2d(nn.Module):
         div_term = torch.exp(torch.arange(0., d_model, 2) * -(math.log(10000.0) / d_model))
         pos_w = torch.arange(0., w).unsqueeze(1)
         pos_h = torch.arange(0., h).unsqueeze(1)
-        pe[0:d_model:2, :, :] = torch.sin(pos_w * div_term).transpose(0, 1).unsqueeze(1).repeat(1, height, 1)
-        pe[1:d_model:2, :, :] = torch.cos(pos_w * div_term).transpose(0, 1).unsqueeze(1).repeat(1, height, 1)
-        pe[d_model::2, :, :] = torch.sin(pos_h * div_term).transpose(0, 1).unsqueeze(2).repeat(1, 1, width)
-        pe[d_model + 1::2, :, :] = torch.cos(pos_h * div_term).transpose(0, 1).unsqueeze(2).repeat(1, 1, width)
+        pe[0:d_model:2, :, :] = torch.sin(pos_w * div_term).transpose(0, 1).unsqueeze(1).repeat(1, h, 1)
+        pe[1:d_model:2, :, :] = torch.cos(pos_w * div_term).transpose(0, 1).unsqueeze(1).repeat(1, h, 1)
+        pe[d_model::2, :, :] = torch.sin(pos_h * div_term).transpose(0, 1).unsqueeze(2).repeat(1, 1, w)
+        pe[d_model + 1::2, :, :] = torch.cos(pos_h * div_term).transpose(0, 1).unsqueeze(2).repeat(1, 1, w)
+        pe = pe.permute(1, 2, 0).unsqueeze(0)
         pe.requires_grad = False
         self.register_buffer('pe', pe)
 
@@ -410,14 +424,14 @@ def attention(query, key, value, mask, dropout, is_src):
     #     p_attn = dp(p_attn)
     return torch.matmul(p_attn, value), p_attn
 
-def trans128_4x(vocab_size, device, teacher_force, d_enc=512, N=3):
+def trans128_4x(vocab_size, device, teacher_force, legacy=False, d_enc=512, N=3):
     return Transformer(N=N, d_dec=128, d_ff=512, vocab_size=vocab_size, device=device, d_enc=d_enc,
-                       teacher_force=teacher_force)
+                       teacher_force=teacher_force, legacy=legacy)
 
-def trans256_4x(vocab_size, device, teacher_force, d_enc=512, N=3):
+def trans256_4x(vocab_size, device, teacher_force, legacy=False, d_enc=512, N=3):
     return Transformer(N=N, d_dec=256, d_ff=1024, vocab_size=vocab_size, device=device, d_enc=d_enc,
-                       teacher_force=teacher_force)
+                       teacher_force=teacher_force, legacy=legacy)
 
-def trans512_4x(vocab_size, device, teacher_force, d_enc=512, N=3):
+def trans512_4x(vocab_size, device, teacher_force, legacy=False, d_enc=512, N=3):
     return Transformer(N=N, d_dec=512, d_ff=2048, vocab_size=vocab_size, device=device, d_enc=d_enc,
-                       teacher_force=teacher_force)
+                       teacher_force=teacher_force, legacy=legacy)

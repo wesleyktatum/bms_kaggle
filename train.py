@@ -104,13 +104,16 @@ def main(args):
         decoder = biLSTM512(vocab_size=vocab_size, device=DEVICE, d_enc=d_enc)
     elif args.decoder == 'trans128_4x':
         decoder = trans128_4x(vocab_size=vocab_size, d_enc=d_enc, device=DEVICE,
-                              N=args.n_decoder_layers, teacher_force=args.teacher_force)
+                              N=args.n_decoder_layers, teacher_force=args.teacher_force,
+                              legacy=args.legacy_model)
     elif args.decoder == 'trans256_4x':
         decoder = trans256_4x(vocab_size=vocab_size, d_enc=d_enc, device=DEVICE,
-                              N=args.n_decoder_layers, teacher_force=args.teacher_force)
+                              N=args.n_decoder_layers, teacher_force=args.teacher_force,
+                              legacy=args.legacy_model)
     elif args.decoder == 'trans512_4x':
         decoder = trans512_4x(vocab_size=vocab_size, d_enc=d_enc, device=DEVICE,
-                              N=args.n_decoder_layers, teacher_force=args.teacher_force)
+                              N=args.n_decoder_layers, teacher_force=args.teacher_force,
+                              legacy=args.legacy_model)
     model = CaptionModel(encoder, decoder)
     if ckpt is not None:
         model.load_state_dict(ckpt['model_state_dict'])
@@ -154,7 +157,7 @@ def main(args):
 
     for epoch in range(start_epoch, start_epoch+args.n_epochs):
         mode = 'train'
-        train_shard_ids = np.random.choice(np.arange(n_train_shards), size=1,
+        train_shard_ids = np.random.choice(np.arange(n_train_shards), size=n_train_shards,
                                            replace=False)
         train_losses = []
         batch_counter = 0
@@ -190,23 +193,22 @@ def main(args):
         # print('Epoch - {} Train - {}, Val - {}'.format(epoch, train_loss, val_loss))
 
         ############################## LEV VALIDATION ##############################
-        if (epoch+1) % 5 == 0:
-            val_data = MoleculeDataset(mode, 0, args.imgs_dir, args.img_size, args.prerotated,
-                                       args.rotate)
-            val_loader = torch.utils.data.DataLoader(val_data, batch_size=args.batch_size,
-                                                     shuffle=False, num_workers=0,
-                                                     pin_memory=False, drop_last=True)
-            lev_score = lev_validate(val_loader, model, epoch, args, ord_dict)
-            del val_data, val_loader
+        val_data = MoleculeDataset(mode, 0, args.imgs_dir, args.img_size, args.prerotated,
+                                   args.rotate)
+        val_loader = torch.utils.data.DataLoader(val_data, batch_size=args.batch_size,
+                                                 shuffle=True, num_workers=0,
+                                                 pin_memory=False, drop_last=True)
+        lev_score = lev_validate(val_loader, model, epoch, args, ord_dict)
+        del val_data, val_loader
 
-            if args.save_best:
-                if lev_score < args.best_lev_score:
-                    args.best_lev_score = lev_score
-                    if args.model_name is not None:
-                        save_fn = os.path.join(args.save_dir, 'model_'+args.model_name+'_best.ckpt')
-                    else:
-                        save_fn = os.path.join(args.save_dir, 'model_best.ckpt')
-                    save(model, optimizers, schedulers, args, epoch+1, save_fn)
+        if args.save_best:
+            if lev_score < args.best_lev_score:
+                args.best_lev_score = lev_score
+                if args.model_name is not None:
+                    save_fn = os.path.join(args.save_dir, 'model_'+args.model_name+'_best.ckpt')
+                else:
+                    save_fn = os.path.join(args.save_dir, 'model_best.ckpt')
+                save(model, optimizers, schedulers, args, epoch+1, save_fn)
 
         if args.scheduler != 'none':
             encoder_scheduler.step()
@@ -409,7 +411,7 @@ def validate(val_loader, model, epoch, args, batch_counter=0):
 def lev_validate(val_loader, model, epoch, args, ord_dict):
     model.eval()
     img_ids = pd.read_csv(os.path.join(args.data_dir, 'val.csv')).image_id.values
-    n_samples = 5000
+    n_samples = 10000
     batch_chunks = args.batch_chunks * 2
     chunk_size = args.batch_size // batch_chunks
 
@@ -465,7 +467,7 @@ if __name__ == '__main__':
     parser.add_argument('--data_dir', type=str, default='data')
     parser.add_argument('--log_dir', type=str, default='logs')
     parser.add_argument('--save_dir', type=str, default='checkpoints')
-    parser.add_argument('--save_freq', type=int, default=1)
+    parser.add_argument('--save_freq', type=int, default=2)
     parser.add_argument('--save_best', default=False, action='store_true')
     parser.add_argument('--checkpoint_fn', type=str, default=None)
     parser.add_argument('--pretrained', default=False, action='store_true')
@@ -476,10 +478,10 @@ if __name__ == '__main__':
                         default=256)
     parser.add_argument('--rotate', default=False, action='store_true')
     parser.add_argument('--batch_size', type=int, default=256)
-    parser.add_argument('--batch_chunks', type=int, default=16)
+    parser.add_argument('--batch_chunks', type=int, default=8)
     parser.add_argument('--encoder_lr', type=float, default=1e-4)
     parser.add_argument('--decoder_lr', type=float, default=4e-4)
-    parser.add_argument('--n_epochs', type=int, default=5)
+    parser.add_argument('--n_epochs', type=int, default=20)
     parser.add_argument('--grad_clip', type=float, default=5.)
     parser.add_argument('--prerotated', default=False, action='store_true')
     parser.add_argument('--encoder', choices=['resnet18', 'resnet34', 'resnet50'],
@@ -490,6 +492,7 @@ if __name__ == '__main__':
                         default='cosine_annealing')
     parser.add_argument('--loss_func', choices=['ce_loss', 'focal_loss'], default='ce_loss')
     parser.add_argument('--teacher_force', default=False, action='store_true')
+    parser.add_argument('--legacy_model', default=False, action='store_true')
     parser.add_argument('--mix_warmup', type=int, default=35000)
     parser.add_argument('--alpha_init', type=float, default=1.)
     parser.add_argument('--n_decoder_layers', type=int, default=3)
