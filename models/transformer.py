@@ -54,21 +54,22 @@ class Transformer(nn.Module):
         decode_lengths = (inchi_lengths - 1).tolist()
 
         ### transform images for decoder
-        if self.legacy: ### 1d positional embedding after image transforms
-            imgs = imgs.contiguous().view(batch_size, self.n_pix, -1)
-            imgs = F.relu(self.img_enc_to_dec(imgs))
-            imgs = imgs.permute(0, 2, 1)
-            imgs = F.relu(self.img_projection(imgs))
-            imgs = imgs.permute(0, 2, 1)
-            imgs = self.pos_embed(imgs)
-
-        else: ### 2d positional embedding before image transforms
-            imgs = self.pos_embed(imgs)
-            imgs = imgs.contiguous().view(batch_size, self.n_pix, -1)
-            imgs = F.relu(self.img_enc_to_dec(imgs))
-            imgs = imgs.permute(0, 2, 1)
-            imgs = F.relu(self.img_projection(imgs))
-            imgs = imgs.permute(0, 2, 1)
+        ############ LEGACY IMAGE EMBEDDINGS #############
+        # if self.legacy: ### 1d positional embedding after image transforms
+        #     imgs = imgs.contiguous().view(batch_size, self.n_pix, -1)
+        #     imgs = F.relu(self.img_enc_to_dec(imgs))
+        #     imgs = imgs.permute(0, 2, 1)
+        #     imgs = F.relu(self.img_projection(imgs))
+        #     imgs = imgs.permute(0, 2, 1)
+        #     imgs = self.pos_embed(imgs)
+        ##################################################
+        
+        imgs = self.pos_embed(imgs)
+        imgs = imgs.contiguous().view(batch_size, self.n_pix, -1)
+        imgs = F.relu(self.img_enc_to_dec(imgs))
+        imgs = imgs.permute(0, 2, 1)
+        imgs = F.relu(self.img_projection(imgs))
+        imgs = imgs.permute(0, 2, 1)
 
         ### transform inchis for decoder
         inchis = encoded_inchis[:,:-1]
@@ -86,9 +87,6 @@ class Transformer(nn.Module):
             preds = self.two_pass_mixed_predict(imgs, inchis, inchi_mask, alpha_mix)
 
         return preds, encoded_inchis, decode_lengths
-
-    def sequential_predict(self, embedded_imgs, inchis, inchi_mask):
-        pass
 
     def two_pass_mixed_predict(self, embedded_imgs, inchis, inchi_mask, alpha_mix):
         ### embed true inchi
