@@ -63,7 +63,7 @@ class Transformer(nn.Module):
         #     imgs = imgs.permute(0, 2, 1)
         #     imgs = self.pos_embed(imgs)
         ##################################################
-        
+
         imgs = self.pos_embed(imgs)
         imgs = imgs.contiguous().view(batch_size, self.n_pix, -1)
         imgs = F.relu(self.img_enc_to_dec(imgs))
@@ -129,15 +129,25 @@ class Transformer(nn.Module):
             width = width
 
         ### transform image for decoder
+        ############ LEGACY IMAGE EMBEDDINGS #############
+        # imgs = imgs.contiguous().view(batch_size, self.n_pix, -1)
+        # imgs = F.relu(self.img_enc_to_dec(imgs))
+        # imgs = imgs.permute(0, 2, 1)
+        # imgs = F.relu(self.img_projection(imgs))
+        # imgs = imgs.permute(0, 2, 1)
+        # imgs = self.pos_embed(imgs)
+        ##################################################
+
+        imgs = self.pos_embed(imgs)
         imgs = imgs.contiguous().view(batch_size, self.n_pix, -1)
         imgs = F.relu(self.img_enc_to_dec(imgs))
         imgs = imgs.permute(0, 2, 1)
         imgs = F.relu(self.img_projection(imgs))
         imgs = imgs.permute(0, 2, 1)
-        imgs = self.pos_embed(imgs)
         imgs = imgs.unsqueeze(1).repeat(1, width, 1, 1).view(batch_size*width,
                                                              imgs.shape[1],
                                                              imgs.shape[2])
+
 
         ### step through sequence to make predictions
         decoded = torch.ones(batch_size,width,1, device=device).fill_(self.sos_idx).long()
